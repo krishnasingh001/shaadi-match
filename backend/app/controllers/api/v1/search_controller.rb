@@ -107,11 +107,21 @@ module Api
             current_user.id, profile.user_id, profile.user_id, current_user.id, Interest.statuses[:accepted]
           ).first
           
-          profile.as_json(include: :user, methods: [:age, :full_name]).merge(
+          profile_json = profile.as_json(include: :user, methods: [:age, :full_name])
+          
+          # Ensure full_name is always present - if method didn't work, construct it manually
+          if profile_json['full_name'].blank? && profile.first_name.present?
+            profile_json['full_name'] = [profile.first_name, profile.last_name].compact.join(' ').strip
+          end
+          
+          profile_json.merge(
             profile_picture_url: picture_url,
             photos_urls: photos_urls,
             is_active: profile.user.active?,
-            interest_accepted: accepted_interest.present?
+            interest_accepted: accepted_interest.present?,
+            first_name: profile.first_name,
+            last_name: profile.last_name,
+            full_name: profile_json['full_name'] || [profile.first_name, profile.last_name].compact.join(' ').strip || 'Unknown User'
           )
         end
         

@@ -84,7 +84,34 @@ module Api
       
       def current_profile
         if current_user.profile
-          render json: current_user.profile.as_json(methods: [:age, :full_name]), status: :ok
+          picture_url = nil
+          if current_user.profile.profile_picture.attached?
+            begin
+              picture_url = Rails.application.routes.url_helpers.rails_blob_url(current_user.profile.profile_picture, only_path: false, host: request.base_url)
+            rescue
+              picture_url = nil
+            end
+          end
+          
+          photos_data = []
+          if current_user.profile.photos.attached?
+            current_user.profile.photos.each do |photo|
+              begin
+                photos_data << {
+                  id: photo.signed_id,
+                  url: Rails.application.routes.url_helpers.rails_blob_url(photo, only_path: false, host: request.base_url)
+                }
+              rescue
+                # Skip if URL generation fails
+              end
+            end
+          end
+          
+          render json: current_user.profile.as_json(methods: [:age, :full_name]).merge(
+            profile_picture_url: picture_url,
+            photos_urls: photos_data.map { |p| p[:url] },
+            photos: photos_data
+          ), status: :ok
         else
           render json: { error: 'Profile not found' }, status: :not_found
         end

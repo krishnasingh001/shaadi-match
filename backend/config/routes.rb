@@ -20,6 +20,8 @@ Rails.application.routes.draw do
       # Profiles
       patch 'profiles/current', to: 'profiles#update_current'
       put 'profiles/current', to: 'profiles#update_current'
+      post 'profiles/current/photos', to: 'profiles#upload_photos'
+      delete 'profiles/current/photos/:photo_id', to: 'profiles#delete_photo'
       resources :profiles, only: [:show, :create, :update]
       
       # Partner Preferences
