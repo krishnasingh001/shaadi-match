@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import api from '../utils/api';
 import toast from 'react-hot-toast';
@@ -37,6 +37,9 @@ const ProfileDetail = () => {
   const [profile, setProfile] = useState(null);
   const [loading, setLoading] = useState(true);
   const [actionLoading, setActionLoading] = useState({});
+  const [currentImageIndex, setCurrentImageIndex] = useState(0);
+  const [touchStart, setTouchStart] = useState(null);
+  const [touchEnd, setTouchEnd] = useState(null);
 
   useEffect(() => {
     fetchProfile();
@@ -48,7 +51,7 @@ const ProfileDetail = () => {
       let response;
       try {
         response = await api.get(`/users/${id}/profile`);
-        setProfile(response.data);
+      setProfile(response.data);
       } catch (profileError) {
         // Fallback to user endpoint
         response = await api.get(`/users/${id}`);
@@ -99,6 +102,64 @@ const ProfileDetail = () => {
     }
   };
 
+  // Get all images: profile picture + additional photos - using useMemo to ensure consistent hook order
+  const images = useMemo(() => {
+    if (!profile) return [getProfileImage({})];
+    
+    const profileData = profile || {};
+    const imageList = [];
+    
+    // Add profile picture if available
+    if (profileData.profile_picture_url) {
+      imageList.push(profileData.profile_picture_url);
+    }
+    
+    // Add additional photos if available
+    if (profileData.photos_urls && Array.isArray(profileData.photos_urls) && profileData.photos_urls.length > 0) {
+      imageList.push(...profileData.photos_urls);
+    }
+    
+    // If no images from API, use fallback
+    if (imageList.length === 0) {
+      imageList.push(getProfileImage(profileData));
+    }
+    
+    return imageList;
+  }, [profile, id]);
+
+  const hasMultipleImages = images.length > 1;
+
+  const goToPreviousImage = useCallback(() => {
+    setCurrentImageIndex((prev) => (prev === 0 ? images.length - 1 : prev - 1));
+  }, [images.length]);
+
+  const goToNextImage = useCallback(() => {
+    setCurrentImageIndex((prev) => (prev === images.length - 1 ? 0 : prev + 1));
+  }, [images.length]);
+
+  // Reset image index when profile changes
+  useEffect(() => {
+    setCurrentImageIndex(0);
+  }, [id]);
+
+  // Keyboard navigation for image carousel
+  useEffect(() => {
+    if (!hasMultipleImages) return;
+
+    const handleKeyPress = (e) => {
+      if (e.key === 'ArrowLeft') {
+        e.preventDefault();
+        goToPreviousImage();
+      } else if (e.key === 'ArrowRight') {
+        e.preventDefault();
+        goToNextImage();
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyPress);
+    return () => window.removeEventListener('keydown', handleKeyPress);
+  }, [hasMultipleImages, goToPreviousImage, goToNextImage]);
+
   const formatEnum = (value) => {
     if (!value) return 'N/A';
     return value.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
@@ -143,33 +204,142 @@ const ProfileDetail = () => {
           {/* Left Sidebar - Profile Image & Actions */}
           <div className="lg:col-span-1">
             <div className="bg-white rounded-2xl shadow-lg border border-gray-100 overflow-hidden sticky top-24">
-              {/* Profile Image */}
-              <div className="relative h-[500px] bg-gradient-to-br from-pink-50 to-purple-50 overflow-hidden">
-                <img 
-                  src={getProfileImage(profileData)} 
-                  alt={profileData.full_name || profileData.first_name} 
-                  className="w-full h-full object-cover" 
-                  onError={(e) => {
-                    e.target.style.display = 'none';
-                    e.target.nextSibling.style.display = 'flex';
-                  }}
-                />
-                <div className="w-full h-full hidden items-center justify-center bg-gradient-to-br from-pink-100 via-purple-100 to-pink-100">
-                  <div className="text-9xl text-pink-300">👤</div>
+              {/* Profile Image Carousel */}
+              <div 
+                className="relative h-[500px] bg-gradient-to-br from-pink-50 to-purple-50 group select-none" 
+                style={{ position: 'relative' }}
+                onTouchStart={(e) => {
+                  setTouchStart(e.targetTouches[0].clientX);
+                  setTouchEnd(null);
+                }}
+                onTouchMove={(e) => {
+                  setTouchEnd(e.targetTouches[0].clientX);
+                }}
+                onTouchEnd={() => {
+                  if (!touchStart || !touchEnd) {
+                    setTouchStart(null);
+                    setTouchEnd(null);
+                    return;
+                  }
+                  const distance = touchStart - touchEnd;
+                  const minSwipeDistance = 50;
+                  const isLeftSwipe = distance > minSwipeDistance;
+                  const isRightSwipe = distance < -minSwipeDistance;
+                  if (isLeftSwipe && hasMultipleImages) {
+                    goToNextImage();
+                  }
+                  if (isRightSwipe && hasMultipleImages) {
+                    goToPreviousImage();
+                  }
+                  setTouchStart(null);
+                  setTouchEnd(null);
+                }}
+              >
+                {/* Image Container with overflow hidden */}
+                <div className="relative w-full h-full overflow-hidden rounded-t-2xl">
+                  {images.map((imageUrl, index) => (
+                    <div
+                      key={index}
+                      className={`absolute inset-0 transition-all duration-700 ease-in-out ${
+                        index === currentImageIndex 
+                          ? 'opacity-100 z-10 scale-100' 
+                          : index < currentImageIndex
+                          ? 'opacity-0 z-0 scale-95 -translate-x-4'
+                          : 'opacity-0 z-0 scale-95 translate-x-4'
+                      }`}
+                    >
+                      <img 
+                        src={imageUrl} 
+                        alt={`${profileData.full_name || profileData.first_name} - Image ${index + 1}`} 
+                        className="w-full h-full object-cover" 
+                        loading={index === 0 ? 'eager' : index <= currentImageIndex + 1 ? 'lazy' : 'lazy'}
+                        onError={(e) => {
+                          e.target.style.display = 'none';
+                          const fallback = e.target.nextElementSibling;
+                          if (fallback) {
+                            fallback.style.display = 'flex';
+                          }
+                        }}
+                      />
+                      <div className="w-full h-full hidden items-center justify-center bg-gradient-to-br from-pink-100 via-purple-100 to-pink-100">
+                        <div className="text-9xl text-pink-300">👤</div>
+                      </div>
+                    </div>
+                  ))}
                 </div>
 
+                {/* Navigation Arrows - Subtle, transparent by default */}
+                {hasMultipleImages && (
+                  <>
+                    {/* Left Arrow */}
+                    <button
+                      type="button"
+                      onClick={goToPreviousImage}
+                      className="absolute left-4 top-1/2 -translate-y-1/2 z-[9999] w-14 h-14 bg-white/40 backdrop-blur-sm rounded-full flex items-center justify-center shadow-lg hover:shadow-2xl hover:scale-110 active:scale-95 transition-all duration-300 border border-white/50 hover:border-white/80 hover:bg-white/80 cursor-pointer group/arrow"
+                      aria-label={`Previous image (${currentImageIndex + 1} of ${images.length})`}
+                    >
+                      <svg className="w-7 h-7 text-white/80 group-hover/arrow:text-white transition-colors drop-shadow-lg" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2.5}>
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" />
+                      </svg>
+                    </button>
+
+                    {/* Right Arrow */}
+                    <button
+                      type="button"
+                      onClick={goToNextImage}
+                      className="absolute right-4 top-1/2 -translate-y-1/2 z-[9999] w-14 h-14 bg-white/40 backdrop-blur-sm rounded-full flex items-center justify-center shadow-lg hover:shadow-2xl hover:scale-110 active:scale-95 transition-all duration-300 border border-white/50 hover:border-white/80 hover:bg-white/80 cursor-pointer group/arrow"
+                      aria-label={`Next image (${currentImageIndex + 1} of ${images.length})`}
+                    >
+                      <svg className="w-7 h-7 text-white/80 group-hover/arrow:text-white transition-colors drop-shadow-lg" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2.5}>
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
+                      </svg>
+                    </button>
+                  </>
+                )}
+
+                {/* Image Counter & Indicators - Subtle, transparent by default */}
+                {hasMultipleImages && (
+                  <div className="absolute bottom-4 left-1/2 -translate-x-1/2 z-[9999] flex flex-col items-center gap-2">
+                    {/* Image Counter - Subtle */}
+                    <div className="bg-black/30 backdrop-blur-md px-4 py-2 rounded-full shadow-lg border border-white/20 opacity-70 hover:opacity-100 transition-opacity duration-300">
+                      <span className="text-sm font-semibold text-white/90">
+                        {currentImageIndex + 1} / {images.length}
+                      </span>
+                    </div>
+                    
+                    {/* Dot Indicators - Subtle */}
+                    <div className="flex items-center gap-2 bg-black/30 backdrop-blur-md px-3 py-2 rounded-full shadow-lg border border-white/20 opacity-70 hover:opacity-100 transition-opacity duration-300">
+                      {images.map((_, index) => (
+                        <button
+                          key={index}
+                          type="button"
+                          onClick={() => setCurrentImageIndex(index)}
+                          className={`transition-all duration-300 rounded-full cursor-pointer ${
+                            index === currentImageIndex
+                              ? 'w-2.5 h-2.5 bg-white scale-125 ring-1 ring-white/50'
+                              : 'w-2 h-2 bg-white/50 hover:bg-white/70 hover:scale-110'
+                          }`}
+                          aria-label={`Go to image ${index + 1} of ${images.length}`}
+                          aria-current={index === currentImageIndex ? 'true' : 'false'}
+                        />
+                      ))}
+                    </div>
+                  </div>
+                )}
+
                 {/* Status Badge */}
-                <div className="absolute top-5 left-5 flex items-center gap-2 bg-white/95 backdrop-blur-md px-3 py-1.5 rounded-full shadow-lg">
+                <div className="absolute top-5 left-5 flex items-center gap-2 bg-white/95 backdrop-blur-md px-3 py-1.5 rounded-full shadow-lg z-20">
                   <div className="w-2.5 h-2.5 bg-green-500 rounded-full animate-pulse"></div>
                   <span className="text-gray-700 text-xs font-semibold">Active Now</span>
                 </div>
 
                 {/* Verified Badge */}
-                <div className="absolute top-5 right-5 w-10 h-10 bg-blue-500 rounded-full flex items-center justify-center shadow-lg">
+                <div className="absolute top-5 right-5 w-10 h-10 bg-blue-500 rounded-full flex items-center justify-center shadow-lg z-20">
                   <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
                   </svg>
                 </div>
+
               </div>
 
               {/* Action Buttons */}
@@ -232,8 +402,8 @@ const ProfileDetail = () => {
                   )}
                 </button>
               </div>
+              </div>
             </div>
-          </div>
 
           {/* Right Side - Profile Information */}
           <div className="lg:col-span-2 space-y-6">
@@ -317,8 +487,8 @@ const ProfileDetail = () => {
                     <svg className="w-6 h-6 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 13.255A23.931 23.931 0 0112 15c-3.183 0-6.22-.62-9-1.745M16 6V4a2 2 0 00-2-2h-4a2 2 0 00-2 2v2m4 6h.01M5 20h14a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
                     </svg>
-                  </div>
-                  <div>
+                    </div>
+                    <div>
                     <div className="text-sm text-gray-600 font-medium mb-1">Profession</div>
                     <div className="text-lg font-semibold text-gray-900">{profileData.profession || 'Not specified'}</div>
                   </div>
@@ -363,7 +533,7 @@ const ProfileDetail = () => {
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
                     </svg>
                   </div>
-                  <div>
+                <div>
                     <div className="text-sm text-gray-600 font-medium mb-1">Caste</div>
                     <div className="text-lg font-semibold text-gray-900">{profileData.caste || 'Not specified'}</div>
                   </div>
@@ -379,23 +549,23 @@ const ProfileDetail = () => {
                       <div className="text-sm text-gray-600 font-medium mb-1">Sub Caste</div>
                       <div className="text-lg font-semibold text-gray-900">{profileData.sub_caste}</div>
                     </div>
-                  </div>
-                )}
+                      </div>
+                    )}
                 <div className="flex items-start gap-4">
                   <div className="w-12 h-12 bg-emerald-100 rounded-xl flex items-center justify-center flex-shrink-0">
                     <svg className="w-6 h-6 text-emerald-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
                     </svg>
                   </div>
-                  <div>
+                    <div>
                     <div className="text-sm text-gray-600 font-medium mb-1">Lifestyle</div>
                     <div className="text-lg font-semibold text-gray-900">
                       {formatEnum(profileData.diet)} • {formatEnum(profileData.drinking)} • {formatEnum(profileData.smoking)}
                     </div>
                   </div>
+                    </div>
+                  </div>
                 </div>
-              </div>
-            </div>
 
             {/* Family Details */}
             {profileData.family_details && (
@@ -412,7 +582,7 @@ const ProfileDetail = () => {
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
                         </svg>
                       </div>
-                      <div>
+                <div>
                         <div className="text-sm text-gray-600">Father's Name</div>
                         <div className="font-semibold text-gray-900">{profileData.father_name}</div>
                       </div>
@@ -424,8 +594,8 @@ const ProfileDetail = () => {
                         <svg className="w-5 h-5 text-pink-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
                         </svg>
-                      </div>
-                      <div>
+                    </div>
+                    <div>
                         <div className="text-sm text-gray-600">Mother's Name</div>
                         <div className="font-semibold text-gray-900">{profileData.mother_name}</div>
                       </div>
@@ -442,11 +612,11 @@ const ProfileDetail = () => {
                         <div className="text-sm text-gray-600">Siblings</div>
                         <div className="font-semibold text-gray-900">{profileData.siblings}</div>
                       </div>
-                    </div>
-                  )}
+                      </div>
+                    )}
                   <p className="text-gray-700 leading-relaxed mt-4 pt-4 border-t border-gray-100">{profileData.family_details}</p>
                 </div>
-              </div>
+                  </div>
             )}
 
             {/* Additional Info */}
@@ -462,8 +632,8 @@ const ProfileDetail = () => {
                       <svg className="w-6 h-6 text-orange-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" />
                       </svg>
-                    </div>
-                    <div>
+                </div>
+                  <div>
                       <div className="text-sm text-gray-600 font-medium mb-1">Native Place</div>
                       <div className="text-lg font-semibold text-gray-900">{profileData.native_place}</div>
                     </div>
@@ -476,7 +646,7 @@ const ProfileDetail = () => {
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 8h10M7 12h4m1 8l-4-4H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-3l-4 4z" />
                       </svg>
                     </div>
-                    <div>
+                  <div>
                       <div className="text-sm text-gray-600 font-medium mb-1">Languages</div>
                       <div className="text-lg font-semibold text-gray-900">{profileData.languages_spoken}</div>
                     </div>

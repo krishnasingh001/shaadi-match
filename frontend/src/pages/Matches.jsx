@@ -808,7 +808,7 @@ const Matches = () => {
                           disabled={page === totalPages}
                           className="px-3 py-2 bg-white border border-gray-200 text-gray-700 text-sm font-semibold hover:bg-gray-50 hover:border-pink-300 hover:text-pink-600 disabled:opacity-40 disabled:cursor-not-allowed transition-all duration-200 rounded-lg hover:shadow-sm flex items-center gap-1"
                           title="Last page"
-                        >
+                      >
                           <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 5l7 7-7 7M5 5l7 7-7 7" />
                           </svg>
