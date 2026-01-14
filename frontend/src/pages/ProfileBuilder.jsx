@@ -307,7 +307,7 @@ const ProfileBuilder = () => {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-pink-500 mx-auto"></div>
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-600 border-t-transparent mx-auto"></div>
           <p className="mt-4 text-gray-600">Loading profile...</p>
         </div>
       </div>
@@ -328,14 +328,14 @@ const ProfileBuilder = () => {
           <div className="flex items-center justify-between">
             {[1, 2, 3, 4, 5].map((s) => (
               <div key={s} className="flex items-center flex-1">
-                <div className={`w-10 h-10 rounded-full flex items-center justify-center font-semibold ${
-                  s <= step ? 'bg-pink-500 text-white' : 'bg-gray-200 text-gray-600'
+                <div className={`w-10 h-10 rounded-full flex items-center justify-center font-semibold transition-all duration-300 ${
+                  s <= step ? 'bg-gradient-to-r from-indigo-600 to-purple-600 text-white shadow-lg' : 'bg-gray-200 text-gray-600'
                 }`}>
                   {s}
                 </div>
                 {s < 5 && (
-                  <div className={`flex-1 h-1 mx-2 ${
-                    s < step ? 'bg-pink-500' : 'bg-gray-200'
+                  <div className={`flex-1 h-1 mx-2 transition-all duration-300 ${
+                    s < step ? 'bg-gradient-to-r from-indigo-600 to-purple-600' : 'bg-gray-200'
                   }`} />
                 )}
               </div>

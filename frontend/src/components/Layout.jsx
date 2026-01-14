@@ -31,10 +31,7 @@ const Layout = ({ children }) => {
                     My Profile
                   </Link>
                   <Link to="/search" className="text-gray-700 hover:text-pink-600 px-3 py-2">
-                    Search
-                  </Link>
-                  <Link to="/matches" className="text-gray-700 hover:text-pink-600 px-3 py-2">
-                    Matches
+                    Discover Profiles
                   </Link>
                   <Link to="/favorites" className="text-gray-700 hover:text-pink-600 px-3 py-2">
                     Favorites
@@ -78,8 +75,7 @@ const Layout = ({ children }) => {
             <div>
               <h4 className="font-semibold mb-4">Quick Links</h4>
               <ul className="space-y-2 text-pink-100">
-                <li><Link to="/search" className="hover:text-white">Search</Link></li>
-                <li><Link to="/matches" className="hover:text-white">Matches</Link></li>
+                <li><Link to="/search" className="hover:text-white">Discover Profiles</Link></li>
                 <li><Link to="/subscriptions" className="hover:text-white">Subscriptions</Link></li>
               </ul>
             </div>

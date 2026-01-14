@@ -3,12 +3,42 @@ module Api
     class UsersController < ApplicationController
       def show
         user = User.find(params[:id])
+        
+        # Include profile picture URL
+        profile_data = nil
+        if user.profile
+          picture_url = nil
+          if user.profile.profile_picture.attached?
+            begin
+              picture_url = Rails.application.routes.url_helpers.rails_blob_url(user.profile.profile_picture, only_path: false, host: request.base_url)
+            rescue
+              picture_url = nil
+            end
+          end
+          
+          # Get all photos URLs
+          photos_urls = []
+          if user.profile.photos.attached?
+            user.profile.photos.each do |photo|
+              begin
+                photos_urls << Rails.application.routes.url_helpers.rails_blob_url(photo, only_path: false, host: request.base_url)
+              rescue
+                # Skip if URL generation fails
+              end
+            end
+          end
+          
+          profile_data = user.profile.as_json(methods: [:age, :full_name]).merge(
+            profile_picture_url: picture_url,
+            photos_urls: photos_urls
+          )
+        end
+        
         render json: user.as_json(
           include: {
-            profile: { methods: [:age, :full_name] },
             partner_preference: {}
           }
-        ), status: :ok
+        ).merge(profile: profile_data), status: :ok
       end
       
       def update
@@ -22,7 +52,31 @@ module Api
       def profile
         user = User.find(params[:id])
         if user.profile
-          render json: user.profile.as_json(methods: [:age, :full_name]), status: :ok
+          picture_url = nil
+          if user.profile.profile_picture.attached?
+            begin
+              picture_url = Rails.application.routes.url_helpers.rails_blob_url(user.profile.profile_picture, only_path: false, host: request.base_url)
+            rescue
+              picture_url = nil
+            end
+          end
+          
+          # Get all photos URLs
+          photos_urls = []
+          if user.profile.photos.attached?
+            user.profile.photos.each do |photo|
+              begin
+                photos_urls << Rails.application.routes.url_helpers.rails_blob_url(photo, only_path: false, host: request.base_url)
+              rescue
+                # Skip if URL generation fails
+              end
+            end
+          end
+          
+          render json: user.profile.as_json(methods: [:age, :full_name]).merge(
+            profile_picture_url: picture_url,
+            photos_urls: photos_urls
+          ), status: :ok
         else
           render json: { error: 'Profile not found' }, status: :not_found
         end

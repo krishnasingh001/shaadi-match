@@ -7,7 +7,8 @@ class User < ApplicationRecord
   has_many :received_interests, class_name: 'Interest', foreign_key: 'receiver_id', dependent: :destroy
   has_many :favorites, dependent: :destroy
   has_many :favorite_users, through: :favorites, source: :favorite_user
-  has_many :conversations, dependent: :destroy
+  has_many :sent_conversations, class_name: 'Conversation', foreign_key: 'sender_id', dependent: :destroy
+  has_many :received_conversations, class_name: 'Conversation', foreign_key: 'receiver_id', dependent: :destroy
   has_many :messages, dependent: :destroy
   has_many :subscriptions, dependent: :destroy
   
@@ -29,6 +30,16 @@ class User < ApplicationRecord
   
   def verified?
     email_verified == 'verified'
+  end
+  
+  def conversations
+    Conversation.where("sender_id = ? OR receiver_id = ?", id, id)
+  end
+  
+  # Check if user is active (active within last 5 minutes)
+  def active?
+    return false unless last_seen_at
+    last_seen_at > 5.minutes.ago
   end
   
   private

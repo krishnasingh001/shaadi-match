@@ -1,5 +1,6 @@
 class ApplicationController < ActionController::API
   before_action :authenticate_user, except: [:signup, :login]
+  after_action :track_user_activity, if: -> { current_user.present? }
   
   private
   
@@ -21,6 +22,13 @@ class ApplicationController < ActionController::API
   
   def current_user
     @current_user
+  end
+  
+  # Track user activity - update last_seen_at on each request
+  def track_user_activity
+    if current_user
+      current_user.update_column(:last_seen_at, Time.current)
+    end
   end
 end
 

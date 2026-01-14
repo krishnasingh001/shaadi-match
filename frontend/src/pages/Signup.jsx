@@ -39,7 +39,7 @@ const Signup = () => {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-pink-50 via-white to-purple-50 py-12 px-4 sm:px-6 lg:px-8">
+    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50 py-12 px-4 sm:px-6 lg:px-8">
       <div className="max-w-md w-full">
         <div className="text-center mb-8">
           <h2 className="text-4xl font-serif font-bold text-gray-900 mb-2">
@@ -104,7 +104,7 @@ const Signup = () => {
           
           <p className="mt-6 text-center text-sm text-gray-600">
             Already have an account?{' '}
-            <Link to="/login" className="font-medium text-pink-600 hover:text-pink-700">
+            <Link to="/login" className="font-medium text-indigo-600 hover:text-indigo-700">
               Sign in
             </Link>
           </p>

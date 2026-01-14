@@ -35,7 +35,7 @@ const Favorites = () => {
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-pink-500"></div>
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-600 border-t-transparent"></div>
       </div>
     );
   }
@@ -52,11 +52,11 @@ const Favorites = () => {
               const profile = user?.profile || {};
               return (
                 <div key={favorite.id} className="card">
-                  <div className="aspect-square bg-gradient-to-br from-pink-200 to-rose-200 rounded-lg mb-4 flex items-center justify-center">
+                  <div className="aspect-square bg-gradient-to-br from-indigo-100 via-purple-100 to-pink-100 rounded-xl mb-4 flex items-center justify-center overflow-hidden">
                     {profile.profile_picture_url ? (
-                      <img src={profile.profile_picture_url} alt={profile.full_name} className="w-full h-full object-cover rounded-lg" />
+                      <img src={profile.profile_picture_url} alt={profile.full_name} className="w-full h-full object-cover rounded-xl" />
                     ) : (
-                      <div className="text-6xl text-pink-400">👤</div>
+                      <div className="text-6xl text-indigo-400">👤</div>
                     )}
                   </div>
                   <h3 className="text-xl font-semibold text-gray-900 mb-2">

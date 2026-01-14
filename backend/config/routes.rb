@@ -31,7 +31,7 @@ Rails.application.routes.draw do
       get 'matches/suggested', to: 'matches#suggested'
       
       # Interests
-      resources :interests, only: [:create, :index, :update] do
+      resources :interests, only: [:create, :index, :update, :destroy] do
         member do
           patch 'accept', to: 'interests#accept'
           patch 'reject', to: 'interests#reject'
@@ -44,6 +44,9 @@ Rails.application.routes.draw do
       # Messages
       resources :conversations, only: [:index, :show, :create] do
         resources :messages, only: [:index, :create]
+        collection do
+          get 'connections', to: 'conversations#connections'
+        end
       end
       
       # Subscriptions

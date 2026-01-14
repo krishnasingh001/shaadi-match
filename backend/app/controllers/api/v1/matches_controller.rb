@@ -26,6 +26,10 @@ module Api
         profile = current_user.profile
         matches = Profile.where.not(user_id: current_user.id)
         
+        # Exclude profiles where current user has already sent an interest
+        sent_interest_user_ids = current_user.sent_interests.pluck(:receiver_id)
+        matches = matches.where.not(user_id: sent_interest_user_ids) if sent_interest_user_ids.any?
+        
         # Filter by opposite gender: male sees female, female sees male
         if profile.gender == 'male'
           matches = matches.where(gender: 'female')
@@ -60,6 +64,12 @@ module Api
           end
         end
         
+        # Check if there's an accepted interest between current_user and this profile's user
+        accepted_interest = Interest.where(
+          "((sender_id = ? AND receiver_id = ?) OR (sender_id = ? AND receiver_id = ?)) AND status = ?",
+          current_user.id, profile.user_id, profile.user_id, current_user.id, Interest.statuses[:accepted]
+        ).first
+        
         {
           id: profile.id,
           user_id: profile.user_id,
@@ -70,7 +80,9 @@ module Api
           profession: profile.profession,
           city: profile.city,
           state: profile.state,
-          profile_picture_url: picture_url
+          profile_picture_url: picture_url,
+          is_active: profile.user.active?,
+          interest_accepted: accepted_interest.present?
         }
       end
       

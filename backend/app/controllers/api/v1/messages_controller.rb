@@ -3,8 +3,11 @@ module Api
     class MessagesController < ApplicationController
       def index
         conversation = current_user.conversations.find(params[:conversation_id])
-        messages = conversation.messages.recent.limit(50)
-        render json: messages.as_json(include: { user: { only: [:id, :email] } }), status: :ok
+        messages = conversation.messages.order(created_at: :desc).limit(50)
+        render json: messages.as_json(
+          include: { user: { only: [:id, :email] } },
+          only: [:id, :body, :created_at, :user_id]
+        ), status: :ok
       end
       
       def create
@@ -12,7 +15,10 @@ module Api
         message = conversation.messages.build(user: current_user, body: params[:body])
         
         if message.save
-          render json: message.as_json(include: { user: { only: [:id, :email] } }), status: :created
+          render json: message.as_json(
+            include: { user: { only: [:id, :email] } },
+            only: [:id, :body, :created_at, :user_id]
+          ), status: :created
         else
           render json: { errors: message.errors.full_messages }, status: :unprocessable_entity
         end

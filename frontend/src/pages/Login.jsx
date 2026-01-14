@@ -27,7 +27,7 @@ const Login = () => {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-pink-50 via-white to-purple-50 py-12 px-4 sm:px-6 lg:px-8">
+    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50 py-12 px-4 sm:px-6 lg:px-8">
       <div className="max-w-md w-full">
         <div className="text-center mb-8">
           <h2 className="text-4xl font-serif font-bold text-gray-900 mb-2">
@@ -72,14 +72,14 @@ const Login = () => {
                   id="remember-me"
                   name="remember-me"
                   type="checkbox"
-                  className="h-4 w-4 text-pink-600 focus:ring-pink-500 border-gray-300 rounded"
+                  className="h-4 w-4 text-indigo-600 focus:ring-indigo-500 border-gray-300 rounded"
                 />
                 <label htmlFor="remember-me" className="ml-2 block text-sm text-gray-700">
                   Remember me
                 </label>
               </div>
               
-              <Link to="/password/reset" className="text-sm text-pink-600 hover:text-pink-700">
+              <Link to="/password/reset" className="text-sm text-indigo-600 hover:text-indigo-700">
                 Forgot password?
               </Link>
             </div>
@@ -95,7 +95,7 @@ const Login = () => {
           
           <p className="mt-6 text-center text-sm text-gray-600">
             Don't have an account?{' '}
-            <Link to="/signup" className="font-medium text-pink-600 hover:text-pink-700">
+            <Link to="/signup" className="font-medium text-indigo-600 hover:text-indigo-700">
               Sign up for free
             </Link>
           </p>
