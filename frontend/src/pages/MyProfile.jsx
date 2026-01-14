@@ -1,5 +1,5 @@
-import { useState, useEffect } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { useState, useEffect, useCallback } from 'react';
+import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import api from '../utils/api';
 import toast from 'react-hot-toast';
@@ -34,22 +34,58 @@ const getProfileImage = (profile) => {
 const MyProfile = () => {
   const { user } = useAuth();
   const navigate = useNavigate();
+  const location = useLocation();
   const [profile, setProfile] = useState(null);
   const [sentInterests, setSentInterests] = useState([]);
   const [receivedInterests, setReceivedInterests] = useState([]);
   const [loading, setLoading] = useState(true);
   const [interestsLoading, setInterestsLoading] = useState(true);
   const [activeTab, setActiveTab] = useState('profile');
+  const [currentImageIndex, setCurrentImageIndex] = useState(0);
+  const [touchStart, setTouchStart] = useState(null);
+  const [touchEnd, setTouchEnd] = useState(null);
 
-  useEffect(() => {
-    fetchProfile();
-    fetchInterests();
-  }, []);
+  // Get all images: profile picture + additional photos
+  const getAllProfileImages = (profileData) => {
+    if (!profileData) return [getProfileImage({})];
+    
+    const imageList = [];
+    
+    // Add profile picture if available
+    if (profileData.profile_picture_url) {
+      imageList.push(profileData.profile_picture_url);
+    }
+    
+    // Add additional photos if available
+    if (profileData.photos_urls && Array.isArray(profileData.photos_urls) && profileData.photos_urls.length > 0) {
+      imageList.push(...profileData.photos_urls);
+    }
+    
+    // If no images from API, use fallback
+    if (imageList.length === 0) {
+      imageList.push(getProfileImage(profileData));
+    }
+    
+    return imageList;
+  };
+
+  const images = profile ? getAllProfileImages(profile) : [];
+  const hasMultipleImages = images.length > 1;
+
+  const goToPreviousImage = useCallback(() => {
+    setCurrentImageIndex((prev) => (prev === 0 ? images.length - 1 : prev - 1));
+  }, [images.length]);
+
+  const goToNextImage = useCallback(() => {
+    setCurrentImageIndex((prev) => (prev === images.length - 1 ? 0 : prev + 1));
+  }, [images.length]);
 
   const fetchProfile = async () => {
     try {
       const response = await api.get('/users/profile');
       setProfile(response.data);
+      // Reset image index when profile loads
+      setCurrentImageIndex(0);
     } catch (error) {
       if (error.response?.status === 404) {
         setProfile(null);
@@ -60,6 +96,39 @@ const MyProfile = () => {
       setLoading(false);
     }
   };
+
+  useEffect(() => {
+    fetchProfile();
+    fetchInterests();
+  }, []);
+
+  // Refresh profile when location changes (e.g., returning from edit page)
+  useEffect(() => {
+    if (location.pathname === '/profile') {
+      fetchProfile();
+    }
+  }, [location.pathname]);
+
+  // Keyboard navigation for image carousel
+  useEffect(() => {
+    if (!hasMultipleImages) return;
+
+    const handleKeyPress = (e) => {
+      // Only handle if not typing in an input
+      if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') return;
+      
+      if (e.key === 'ArrowLeft') {
+        e.preventDefault();
+        goToPreviousImage();
+      } else if (e.key === 'ArrowRight') {
+        e.preventDefault();
+        goToNextImage();
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyPress);
+    return () => window.removeEventListener('keydown', handleKeyPress);
+  }, [hasMultipleImages, goToPreviousImage, goToNextImage]);
 
   const fetchInterests = async () => {
     setInterestsLoading(true);
@@ -253,22 +322,129 @@ const MyProfile = () => {
         {/* Profile Tab */}
         {activeTab === 'profile' && (
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-            {/* Left Sidebar - Profile Image */}
+            {/* Left Sidebar - Profile Image Carousel */}
             <div className="lg:col-span-1">
               <div className="bg-white rounded-2xl shadow-lg border border-gray-100 overflow-hidden sticky top-24">
-                <div className="relative h-[500px] bg-gradient-to-br from-pink-50 to-purple-50 overflow-hidden">
-                  <img 
-                    src={getProfileImage(profile)} 
-                    alt={profile.full_name || profile.first_name} 
-                    className="w-full h-full object-cover" 
-                    onError={(e) => {
-                      e.target.style.display = 'none';
-                      e.target.nextSibling.style.display = 'flex';
-                    }}
-                  />
-                  <div className="w-full h-full hidden items-center justify-center bg-gradient-to-br from-pink-100 via-purple-100 to-pink-100">
-                    <div className="text-9xl text-pink-300">👤</div>
+                <div 
+                  className="relative h-[500px] bg-gradient-to-br from-pink-50 to-purple-50 select-none group"
+                  onTouchStart={(e) => {
+                    setTouchStart(e.targetTouches[0].clientX);
+                    setTouchEnd(null);
+                  }}
+                  onTouchMove={(e) => {
+                    setTouchEnd(e.targetTouches[0].clientX);
+                  }}
+                  onTouchEnd={() => {
+                    if (!touchStart || !touchEnd) {
+                      setTouchStart(null);
+                      setTouchEnd(null);
+                      return;
+                    }
+                    const distance = touchStart - touchEnd;
+                    const minSwipeDistance = 50;
+                    const isLeftSwipe = distance > minSwipeDistance;
+                    const isRightSwipe = distance < -minSwipeDistance;
+                    if (isLeftSwipe && hasMultipleImages) {
+                      goToNextImage();
+                    }
+                    if (isRightSwipe && hasMultipleImages) {
+                      goToPreviousImage();
+                    }
+                    setTouchStart(null);
+                    setTouchEnd(null);
+                  }}
+                >
+                  {/* Image Container */}
+                  <div className="relative w-full h-full overflow-hidden">
+                    {images.map((imageUrl, index) => (
+                      <div
+                        key={index}
+                        className={`absolute inset-0 transition-all duration-700 ease-in-out ${
+                          index === currentImageIndex 
+                            ? 'opacity-100 z-10 scale-100' 
+                            : index < currentImageIndex
+                            ? 'opacity-0 z-0 scale-95 -translate-x-4'
+                            : 'opacity-0 z-0 scale-95 translate-x-4'
+                        }`}
+                      >
+                        <img 
+                          src={imageUrl} 
+                          alt={`${profile.full_name || profile.first_name} - Image ${index + 1}`} 
+                          className="w-full h-full object-cover" 
+                          loading={index === 0 ? 'eager' : index <= currentImageIndex + 1 ? 'lazy' : 'lazy'}
+                          onError={(e) => {
+                            e.target.style.display = 'none';
+                            const fallback = e.target.nextElementSibling;
+                            if (fallback) {
+                              fallback.style.display = 'flex';
+                            }
+                          }}
+                        />
+                        <div className="w-full h-full hidden items-center justify-center bg-gradient-to-br from-pink-100 via-purple-100 to-pink-100">
+                          <div className="text-9xl text-pink-300">👤</div>
+                        </div>
+                      </div>
+                    ))}
                   </div>
+
+                  {/* Navigation Arrows - Subtle, transparent by default */}
+                  {hasMultipleImages && (
+                    <>
+                      {/* Left Arrow */}
+                      <button
+                        type="button"
+                        onClick={goToPreviousImage}
+                        className="absolute left-4 top-1/2 -translate-y-1/2 z-[9999] w-14 h-14 bg-white/40 backdrop-blur-sm rounded-full flex items-center justify-center shadow-lg hover:shadow-2xl hover:scale-110 active:scale-95 transition-all duration-300 border border-white/50 hover:border-white/80 hover:bg-white/80 cursor-pointer group/arrow"
+                        aria-label={`Previous image (${currentImageIndex + 1} of ${images.length})`}
+                      >
+                        <svg className="w-7 h-7 text-white/80 group-hover/arrow:text-white transition-colors drop-shadow-lg" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2.5}>
+                          <path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" />
+                        </svg>
+                      </button>
+
+                      {/* Right Arrow */}
+                      <button
+                        type="button"
+                        onClick={goToNextImage}
+                        className="absolute right-4 top-1/2 -translate-y-1/2 z-[9999] w-14 h-14 bg-white/40 backdrop-blur-sm rounded-full flex items-center justify-center shadow-lg hover:shadow-2xl hover:scale-110 active:scale-95 transition-all duration-300 border border-white/50 hover:border-white/80 hover:bg-white/80 cursor-pointer group/arrow"
+                        aria-label={`Next image (${currentImageIndex + 1} of ${images.length})`}
+                      >
+                        <svg className="w-7 h-7 text-white/80 group-hover/arrow:text-white transition-colors drop-shadow-lg" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2.5}>
+                          <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
+                        </svg>
+                      </button>
+                    </>
+                  )}
+
+                  {/* Image Counter & Indicators - Subtle, transparent by default */}
+                  {hasMultipleImages && (
+                    <div className="absolute bottom-4 left-1/2 -translate-x-1/2 z-[9999] flex flex-col items-center gap-2">
+                      {/* Image Counter - Subtle */}
+                      <div className="bg-black/30 backdrop-blur-md px-4 py-2 rounded-full shadow-lg border border-white/20 opacity-70 hover:opacity-100 transition-opacity duration-300">
+                        <span className="text-sm font-semibold text-white/90">
+                          {currentImageIndex + 1} / {images.length}
+                        </span>
+                      </div>
+                      
+                      {/* Dot Indicators - Subtle */}
+                      <div className="flex items-center gap-2 bg-black/30 backdrop-blur-md px-3 py-2 rounded-full shadow-lg border border-white/20 opacity-70 hover:opacity-100 transition-opacity duration-300">
+                        {images.map((_, index) => (
+                          <button
+                            key={index}
+                            type="button"
+                            onClick={() => setCurrentImageIndex(index)}
+                            className={`transition-all duration-300 rounded-full cursor-pointer ${
+                              index === currentImageIndex
+                                ? 'w-2.5 h-2.5 bg-white scale-125 ring-1 ring-white/50'
+                                : 'w-2 h-2 bg-white/50 hover:bg-white/70 hover:scale-110'
+                            }`}
+                            aria-label={`Go to image ${index + 1} of ${images.length}`}
+                            aria-current={index === currentImageIndex ? 'true' : 'false'}
+                          />
+                        ))}
+                      </div>
+                    </div>
+                  )}
                 </div>
                 <div className="p-6 text-center">
                   <h2 className="text-2xl font-bold text-gray-900 mb-2">

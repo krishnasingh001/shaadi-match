@@ -40,10 +40,29 @@ const ProfileDetail = () => {
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
   const [touchStart, setTouchStart] = useState(null);
   const [touchEnd, setTouchEnd] = useState(null);
+  const [isFavorited, setIsFavorited] = useState(false);
 
   useEffect(() => {
     fetchProfile();
+    if (id) {
+      checkIfFavorited();
+    }
   }, [id]);
+
+  const checkIfFavorited = async () => {
+    if (!id) return;
+    try {
+      const response = await api.get('/favorites');
+      const favorites = response.data || [];
+      const isFav = favorites.some(fav => 
+        fav.favorite_user_id === parseInt(id) || 
+        fav.favorite_user?.id === parseInt(id)
+      );
+      setIsFavorited(isFav);
+    } catch (error) {
+      // Silently fail - not critical
+    }
+  };
 
   const fetchProfile = async () => {
     try {
@@ -80,10 +99,37 @@ const ProfileDetail = () => {
   const addToFavorites = async () => {
     setActionLoading(prev => ({ ...prev, favorite: true }));
     try {
-      await api.post('/favorites', { user_id: id });
-      toast.success('Added to favorites!');
+      const response = await api.post('/favorites', { user_id: id });
+      setIsFavorited(true);
+      if (response.data.message === 'Already in favorites') {
+        toast.success('Already in favorites!', {
+          action: {
+            label: 'View Favorites',
+            onClick: () => navigate('/favorites'),
+          },
+        });
+      } else {
+        toast.success('Added to favorites!', {
+          action: {
+            label: 'View Favorites',
+            onClick: () => navigate('/favorites'),
+          },
+          duration: 5000,
+        });
+      }
     } catch (error) {
-      toast.error(error.response?.data?.errors?.[0] || 'Failed to add to favorites');
+      const errorMessage = error.response?.data?.errors?.[0] || error.response?.data?.error || 'Failed to add to favorites';
+      if (errorMessage.includes('already') || errorMessage.includes('duplicate')) {
+        setIsFavorited(true);
+        toast.success('Already in favorites!', {
+          action: {
+            label: 'View Favorites',
+            onClick: () => navigate('/favorites'),
+          },
+        });
+      } else {
+        toast.error(errorMessage);
+      }
     } finally {
       setActionLoading(prev => ({ ...prev, favorite: false }));
     }
@@ -365,13 +411,24 @@ const ProfileDetail = () => {
                 </button>
                 <button 
                   onClick={addToFavorites}
-                  disabled={actionLoading.favorite}
-                  className="w-full px-6 py-3.5 bg-white border-2 border-pink-300 hover:border-pink-500 hover:bg-pink-50 text-pink-600 text-sm font-semibold rounded-xl transition-all duration-200 shadow-sm hover:shadow-md disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                  disabled={actionLoading.favorite || isFavorited}
+                  className={`w-full px-6 py-3.5 text-sm font-semibold rounded-xl transition-all duration-200 shadow-sm hover:shadow-md disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 ${
+                    isFavorited
+                      ? 'bg-gradient-to-r from-yellow-400 to-amber-500 text-white border-2 border-transparent'
+                      : 'bg-white border-2 border-pink-300 hover:border-pink-500 hover:bg-pink-50 text-pink-600'
+                  }`}
                 >
                   {actionLoading.favorite ? (
                     <>
                       <div className="w-5 h-5 border-2 border-pink-500 border-t-transparent rounded-full animate-spin"></div>
                       <span>Adding...</span>
+                    </>
+                  ) : isFavorited ? (
+                    <>
+                      <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
+                        <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z" />
+                      </svg>
+                      <span>In Favorites</span>
                     </>
                   ) : (
                     <>

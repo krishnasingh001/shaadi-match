@@ -562,6 +562,12 @@ const Search = () => {
                         const hasMultipleImages = images.length > 1;
                         const currentIndex = currentImageIndices[profile.id] || 0;
                         
+                        // Get display name with robust fallbacks
+                        const displayName = profile.full_name || 
+                                          (profile.first_name && profile.last_name ? `${profile.first_name} ${profile.last_name}`.trim() : profile.first_name) ||
+                                          profile.first_name ||
+                                          'Unknown User';
+                        
                         const goToPrevious = (e) => {
                           e.preventDefault();
                           e.stopPropagation();
@@ -617,37 +623,39 @@ const Search = () => {
                         return (
                           <div 
                             className="relative h-[450px] bg-gradient-to-br from-pink-50 to-purple-50 group/image-carousel select-none" 
-                            style={{ position: 'relative' }}
+                            style={{ position: 'relative', isolation: 'isolate' }}
                             onTouchStart={handleTouchStart}
                             onTouchMove={handleTouchMove}
                             onTouchEnd={handleTouchEnd}
                           >
                             {/* Image Container with overflow hidden */}
-                            <div className="relative w-full h-full overflow-hidden rounded-t-2xl">
+                            <div className="relative w-full h-full overflow-hidden rounded-t-2xl z-0">
                               {images.map((imageUrl, index) => (
                                 <div
                                   key={index}
                                   className={`absolute inset-0 transition-all duration-700 ease-in-out ${
                                     index === currentIndex 
-                                      ? 'opacity-100 z-10 scale-100' 
+                                      ? 'opacity-100 z-[1] scale-100' 
                                       : index < currentIndex
                                       ? 'opacity-0 z-0 scale-95 -translate-x-4'
                                       : 'opacity-0 z-0 scale-95 translate-x-4'
                                   }`}
                                 >
-                                  <img 
-                                    src={imageUrl} 
-                                    alt={`${profile.full_name} - Image ${index + 1}`} 
-                                    className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500 ease-out" 
-                                    loading={index === 0 ? 'eager' : index <= currentIndex + 1 ? 'lazy' : 'lazy'}
-                                    onError={(e) => {
-                                      e.target.style.display = 'none';
-                                      const fallback = e.target.nextElementSibling;
-                                      if (fallback) {
-                                        fallback.style.display = 'flex';
-                                      }
-                                    }}
-                                  />
+                                   <img 
+                                     src={imageUrl} 
+                                     alt={`${displayName} - Image ${index + 1}`} 
+                                     className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500 ease-out" 
+                                     loading={index === 0 ? 'eager' : index <= currentIndex + 1 ? 'lazy' : 'lazy'}
+                                     decoding="async"
+                                     fetchPriority={index === 0 ? 'high' : 'low'}
+                                     onError={(e) => {
+                                       e.target.style.display = 'none';
+                                       const fallback = e.target.nextElementSibling;
+                                       if (fallback) {
+                                         fallback.style.display = 'flex';
+                                       }
+                                     }}
+                                   />
                                   <div className="w-full h-full hidden items-center justify-center bg-gradient-to-br from-pink-100 via-purple-100 to-pink-100">
                                     <div className="text-8xl text-pink-300">👤</div>
                                   </div>
@@ -723,7 +731,7 @@ const Search = () => {
 
                             {/* Heart Bubble Animation */}
                             {heartAnimations[profile.id] && (
-                              <div className="absolute inset-0 pointer-events-none overflow-hidden z-10">
+                              <div className="absolute inset-0 pointer-events-none overflow-hidden z-[15]">
                                 {[...Array(35)].map((_, i) => {
                                   // Spread hearts across the entire card width (5% to 95%)
                                   const randomX = 5 + Math.random() * 90;
@@ -796,30 +804,45 @@ const Search = () => {
                             )}
 
                             {/* Info Overlay */}
-                            <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/90 via-black/70 to-transparent pt-20 pb-5 px-5">
-                              <div className="flex items-center gap-2.5 mb-3">
-                                <h3 className="text-2xl font-bold text-white tracking-tight">{profile.full_name}</h3>
-                                <span className="text-white/90 text-base font-medium">{profile.age}</span>
-                                <div className="w-6 h-6 bg-blue-500 rounded-full flex items-center justify-center shadow-md">
+                            <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/90 via-black/70 to-transparent pt-20 pb-5 px-5 z-[50]">
+                              <div className="flex items-center gap-2.5 mb-3 flex-wrap">
+                                <h3 
+                                  className="text-2xl font-bold text-white tracking-tight min-w-0 flex-shrink-0 relative z-[51]" 
+                                  title={displayName}
+                                  style={{ 
+                                    textShadow: '0 2px 8px rgba(0,0,0,0.8), 0 1px 3px rgba(0,0,0,0.5)',
+                                    WebkitTextStroke: '0.5px rgba(0,0,0,0.3)'
+                                  }}
+                                >
+                                  {displayName}
+                                </h3>
+                                {profile.age && (
+                                  <span className="text-white/90 text-base font-medium whitespace-nowrap flex-shrink-0">{profile.age} years</span>
+                                )}
+                                <div className="w-6 h-6 bg-blue-500 rounded-full flex items-center justify-center shadow-md flex-shrink-0">
                                   <svg className="w-3.5 h-3.5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
                                   </svg>
                                 </div>
                               </div>
-                              <div className="flex items-center gap-5 text-white/95 text-sm">
-                                <div className="flex items-center gap-2">
-                                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
-                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
-                                  </svg>
-                                  <span className="font-medium">{profile.city}</span>
-                                </div>
-                                <div className="flex items-center gap-2">
-                                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 13.255A23.931 23.931 0 0112 15c-3.183 0-6.22-.62-9-1.745M16 6V4a2 2 0 00-2-2h-4a2 2 0 00-2 2v2m4 6h.01M5 20h14a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
-                                  </svg>
-                                  <span className="font-medium">{profile.profession}</span>
-                                </div>
+                              <div className="flex items-center gap-5 text-white/95 text-sm flex-wrap relative z-[51]">
+                                {profile.city && (
+                                  <div className="flex items-center gap-2">
+                                    <svg className="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
+                                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
+                                    </svg>
+                                    <span className="font-medium">{profile.city}</span>
+                                  </div>
+                                )}
+                                {profile.profession && (
+                                  <div className="flex items-center gap-2">
+                                    <svg className="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 13.255A23.931 23.931 0 0112 15c-3.183 0-6.22-.62-9-1.745M16 6V4a2 2 0 00-2-2h-4a2 2 0 00-2 2v2m4 6h.01M5 20h14a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+                                    </svg>
+                                    <span className="font-medium">{profile.profession}</span>
+                                  </div>
+                                )}
                               </div>
                             </div>
                           </div>
