@@ -16,6 +16,9 @@ module Api
         favorite = current_user.favorites.build(favorite_user_id: params[:user_id])
         
         if favorite.save
+          # Create notification for the favorited user
+          Notification.create_for_favorite(favorite)
+          
           user = favorite.favorite_user
           profile = user.profile
           

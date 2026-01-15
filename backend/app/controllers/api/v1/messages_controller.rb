@@ -15,6 +15,12 @@ module Api
         message = conversation.messages.build(user: current_user, body: params[:body])
         
         if message.save
+          # Create notification for the receiver (only if not the sender)
+          receiver = conversation.sender == current_user ? conversation.receiver : conversation.sender
+          if receiver != current_user
+            Notification.create_for_message(message)
+          end
+          
           render json: message.as_json(
             include: { user: { only: [:id, :email] } },
             only: [:id, :body, :created_at, :user_id]

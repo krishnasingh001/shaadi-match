@@ -18,6 +18,8 @@ module Api
           interest = current_user.sent_interests.build(receiver_id: params[:receiver_id])
           
           if interest.save
+            # Create notification for receiver
+            Notification.create_for_interest(interest)
             render json: interest.as_json(include: [:sender, :receiver]), status: :created
           else
             render json: { errors: interest.errors.full_messages }, status: :unprocessable_entity
@@ -59,6 +61,8 @@ module Api
       def accept
         interest = current_user.received_interests.find(params[:id])
         if interest.update(status: :accepted)
+          # Create notification for sender that their interest was accepted
+          Notification.create_for_interest_accepted(interest)
           render json: interest.as_json(include: [:sender, :receiver]), status: :ok
         else
           render json: { errors: interest.errors.full_messages }, status: :unprocessable_entity

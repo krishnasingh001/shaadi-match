@@ -11,6 +11,26 @@ module Api
         sent_pending_interest_user_ids = current_user.sent_interests.where.not(status: Interest.statuses[:accepted]).pluck(:receiver_id)
         profiles = profiles.where.not(user_id: sent_pending_interest_user_ids) if sent_pending_interest_user_ids.any?
         
+        # General search query - searches across multiple fields
+        if params[:query].present? && params[:query].strip.present?
+          search_term = "%#{params[:query].strip.downcase}%"
+          # Search in first_name, last_name, full name (concatenated), and profession
+          # Using PostgreSQL's string concatenation operator ||
+          # Handle NULL values with COALESCE
+          profiles = profiles.where(
+            "LOWER(COALESCE(first_name, '')) LIKE :search OR " +
+            "LOWER(COALESCE(last_name, '')) LIKE :search OR " +
+            "LOWER(TRIM(COALESCE(first_name, '') || ' ' || COALESCE(last_name, ''))) LIKE :search OR " +
+            "LOWER(COALESCE(profession, '')) LIKE :search OR " +
+            "LOWER(COALESCE(city, '')) LIKE :search OR " +
+            "LOWER(COALESCE(state, '')) LIKE :search OR " +
+            "LOWER(COALESCE(education, '')) LIKE :search OR " +
+            "LOWER(COALESCE(religion, '')) LIKE :search OR " +
+            "LOWER(COALESCE(caste, '')) LIKE :search",
+            search: search_term
+          )
+        end
+        
         # Apply gender filter - show opposite gender by default
         if params[:gender].present?
           profiles = profiles.where(gender: params[:gender])
