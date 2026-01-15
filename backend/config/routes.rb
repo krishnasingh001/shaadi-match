@@ -44,7 +44,7 @@ Rails.application.routes.draw do
       resources :favorites, only: [:create, :index, :destroy]
       
       # Notifications
-      resources :notifications, only: [:index] do
+      resources :notifications, only: [:index, :destroy] do
         collection do
           get 'unread_count', to: 'notifications#unread_count'
           post 'mark_all_as_read', to: 'notifications#mark_all_as_read'

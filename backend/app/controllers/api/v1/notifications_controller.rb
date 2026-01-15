@@ -65,6 +65,15 @@ module Api
         count = current_user.notifications.unread.count
         render json: { unread_count: count }, status: :ok
       end
+      
+      def destroy
+        notification = current_user.notifications.find(params[:id])
+        if notification.destroy
+          render json: { message: 'Notification dismissed' }, status: :ok
+        else
+          render json: { errors: notification.errors.full_messages }, status: :unprocessable_entity
+        end
+      end
     end
   end
 end
