@@ -3,6 +3,7 @@ import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import api from '../utils/api';
 import toast from 'react-hot-toast';
+import EmojiPicker from 'emoji-picker-react';
 
 // Available profile images
 const PROFILE_IMAGES = [
@@ -43,13 +44,85 @@ const Messages = () => {
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState('conversations'); // 'conversations' or 'connections'
   const [lastMessageId, setLastMessageId] = useState(null); // Track last message ID for polling
+  const [showEmojiPicker, setShowEmojiPicker] = useState(false);
   const messagesEndRef = useRef(null);
   const messagesContainerRef = useRef(null);
   const pollingIntervalRef = useRef(null);
+  const userScrolledUpRef = useRef(false); // Track if user manually scrolled up
+  const isUserMessageRef = useRef(false); // Track if the message update is from user action
+  const emojiPickerRef = useRef(null);
+  const messageInputRef = useRef(null);
 
-  // Auto-scroll to bottom when messages change
-  const scrollToBottom = () => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+  // Check if user is at the bottom of the chat (more strict)
+  const isAtBottom = () => {
+    if (!messagesContainerRef.current) return true;
+    const container = messagesContainerRef.current;
+    const threshold = 50; // 50px threshold - more strict
+    const distanceFromBottom = container.scrollHeight - container.scrollTop - container.clientHeight;
+    return distanceFromBottom <= threshold;
+  };
+
+  // Auto-scroll to bottom - only when explicitly needed
+  const scrollToBottom = (force = false) => {
+    if (force) {
+      // Force scroll (user sent message)
+      userScrolledUpRef.current = false;
+      setTimeout(() => {
+        messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+      }, 50);
+    } else if (isAtBottom() && !userScrolledUpRef.current) {
+      // Only auto-scroll if user is at bottom and hasn't scrolled up
+      setTimeout(() => {
+        messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+      }, 50);
+    }
+  };
+
+  // Track user scroll behavior
+  useEffect(() => {
+    const container = messagesContainerRef.current;
+    if (!container) return;
+
+    const handleScroll = () => {
+      // If user scrolls up, mark that they're reading older messages
+      if (!isAtBottom()) {
+        userScrolledUpRef.current = true;
+      } else {
+        // If user scrolls back to bottom, allow auto-scroll again
+        userScrolledUpRef.current = false;
+      }
+    };
+
+    container.addEventListener('scroll', handleScroll, { passive: true });
+    return () => container.removeEventListener('scroll', handleScroll);
+  }, [selectedConversation]);
+
+  // Close emoji picker when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (
+        emojiPickerRef.current &&
+        !emojiPickerRef.current.contains(event.target) &&
+        !event.target.closest('[data-emoji-button]')
+      ) {
+        setShowEmojiPicker(false);
+      }
+    };
+
+    if (showEmojiPicker) {
+      document.addEventListener('mousedown', handleClickOutside);
+      return () => document.removeEventListener('mousedown', handleClickOutside);
+    }
+  }, [showEmojiPicker]);
+
+  // Handle emoji selection
+  const onEmojiClick = (emojiData) => {
+    const emoji = emojiData.emoji;
+    setNewMessage(prev => prev + emoji);
+    // Focus back on input after selecting emoji
+    if (messageInputRef.current) {
+      messageInputRef.current.focus();
+    }
   };
 
   useEffect(() => {
@@ -79,6 +152,10 @@ const Messages = () => {
 
   useEffect(() => {
     if (selectedConversation) {
+      // Reset scroll state when switching conversations
+      userScrolledUpRef.current = false;
+      isUserMessageRef.current = false;
+      
       fetchMessages();
       
       // Start polling for new messages every 2 seconds
@@ -98,10 +175,19 @@ const Messages = () => {
     }
   }, [selectedConversation]);
 
-  // Scroll to bottom when messages update
+  // Scroll to bottom only when conversation changes (initial load)
   useEffect(() => {
-    scrollToBottom();
-  }, [messages]);
+    if (selectedConversation && messages.length > 0 && isUserMessageRef.current === false) {
+      // Only scroll on initial load
+      setTimeout(() => {
+        scrollToBottom(true);
+      }, 150);
+    }
+    // Reset flag after initial scroll
+    if (messages.length > 0) {
+      isUserMessageRef.current = false;
+    }
+  }, [selectedConversation]);
 
   const fetchConversations = async () => {
     try {
@@ -164,8 +250,19 @@ const Messages = () => {
         const latestMessageId = fetchedMessages[fetchedMessages.length - 1].id;
         
         if (lastMessageId === null || latestMessageId !== lastMessageId) {
+          // Check if user is at bottom BEFORE updating messages
+          const wasAtBottom = isAtBottom() && !userScrolledUpRef.current;
+          
           setMessages(fetchedMessages);
           setLastMessageId(latestMessageId);
+          
+          // Only scroll if user was at bottom AND hasn't scrolled up
+          // Never force scroll on polling - only gentle auto-scroll if user is already at bottom
+          if (wasAtBottom) {
+            setTimeout(() => {
+              scrollToBottom(false); // Not forced - will check again
+            }, 100);
+          }
           
           // Update conversation list to show latest message
           updateConversationList();
@@ -233,6 +330,7 @@ const Messages = () => {
 
     const messageText = newMessage.trim();
     setNewMessage('');
+    setShowEmojiPicker(false); // Close emoji picker when sending
 
     // Optimistic update - add message immediately to UI
     const tempMessage = {
@@ -243,8 +341,15 @@ const Messages = () => {
       isOptimistic: true, // Flag to identify optimistic messages
     };
 
+    // Mark that this is a user-initiated message
+    isUserMessageRef.current = true;
+    userScrolledUpRef.current = false; // Reset scroll state when user sends
+    
     setMessages(prev => [...prev, tempMessage]);
-    scrollToBottom();
+    // Always scroll when user sends a message
+    setTimeout(() => {
+      scrollToBottom(true);
+    }, 50);
 
     try {
       const response = await api.post(`/conversations/${selectedConversation.id}/messages`, {
@@ -263,7 +368,10 @@ const Messages = () => {
       // Update conversation list
       updateConversationList();
       
-      scrollToBottom();
+      // Always scroll after sending message (user action)
+      setTimeout(() => {
+        scrollToBottom(true);
+      }, 50);
     } catch (error) {
       // Remove optimistic message on error
       setMessages(prev => prev.filter(m => m.id !== tempMessage.id));
@@ -544,17 +652,28 @@ const Messages = () => {
                             className={`flex ${isOwn ? 'justify-end' : 'justify-start'}`}
                           >
                             <div
-                              className={`max-w-xs lg:max-w-md px-4 py-2 rounded-2xl ${
+                              className={`max-w-xs lg:max-w-md px-4 py-2.5 rounded-2xl shadow-sm ${
                                 isOwn
                                   ? 'bg-gradient-to-r from-pink-500 to-rose-500 text-white'
                                   : 'bg-white text-gray-900 border border-gray-200'
                               } ${isOptimistic ? 'opacity-70' : ''}`}
                             >
-                              <p className="text-sm">{message.body}</p>
-                              <p className={`text-xs mt-1 ${
+                              <p className="text-sm whitespace-pre-wrap break-words leading-relaxed" style={{ wordBreak: 'break-word' }}>
+                                {message.body}
+                              </p>
+                              <p className={`text-xs mt-1.5 flex items-center gap-1 ${
                                 isOwn ? 'text-pink-100' : 'text-gray-500'
                               }`}>
-                                {isOptimistic ? 'Sending...' : formatTime(message.created_at)}
+                                {isOptimistic ? (
+                                  <>
+                                    <svg className="w-3 h-3 animate-spin" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                                    </svg>
+                                    <span>Sending...</span>
+                                  </>
+                                ) : (
+                                  formatTime(message.created_at)
+                                )}
                               </p>
                             </div>
                           </div>
@@ -572,22 +691,110 @@ const Messages = () => {
                 </div>
 
                 {/* Message Input */}
-                <form onSubmit={sendMessage} className="border-t border-gray-200 p-4">
-                  <div className="flex gap-2">
-                    <input
-                      type="text"
-                      value={newMessage}
-                      onChange={(e) => setNewMessage(e.target.value)}
-                      placeholder="Type a message..."
-                      className="flex-1 px-4 py-3 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-pink-500 focus:border-pink-500"
-                    />
+                <form onSubmit={sendMessage} className="border-t border-gray-200 p-4 bg-white relative">
+                  {/* Emoji Picker */}
+                  {showEmojiPicker && (
+                    <div 
+                      ref={emojiPickerRef}
+                      className="absolute bottom-full right-4 mb-2 z-50 shadow-2xl rounded-xl overflow-hidden border border-gray-200"
+                    >
+                      <EmojiPicker
+                        onEmojiClick={onEmojiClick}
+                        theme="light"
+                        width={350}
+                        height={400}
+                        previewConfig={{
+                          showPreview: false
+                        }}
+                        skinTonesDisabled
+                        searchDisabled={false}
+                      />
+                    </div>
+                  )}
+                  
+                  <div className="flex gap-2 items-end">
+                    {/* Emoji Button */}
+                    <button
+                      type="button"
+                      data-emoji-button
+                      onClick={() => setShowEmojiPicker(!showEmojiPicker)}
+                      className={`p-3 rounded-lg transition-all duration-200 flex-shrink-0 ${
+                        showEmojiPicker 
+                          ? 'bg-pink-100 text-pink-600' 
+                          : 'text-gray-600 hover:text-pink-600 hover:bg-pink-50'
+                      }`}
+                      aria-label="Add emoji"
+                    >
+                      <svg 
+                        className="w-6 h-6" 
+                        fill="none" 
+                        stroke="currentColor" 
+                        viewBox="0 0 24 24"
+                      >
+                        <path 
+                          strokeLinecap="round" 
+                          strokeLinejoin="round" 
+                          strokeWidth={2} 
+                          d="M14.828 14.828a4 4 0 01-5.656 0M9 10h.01M15 10h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" 
+                        />
+                      </svg>
+                    </button>
+                    
+                    {/* Message Input */}
+                    <div className="flex-1 relative">
+                      <input
+                        ref={messageInputRef}
+                        type="text"
+                        value={newMessage}
+                        onChange={(e) => setNewMessage(e.target.value)}
+                        onFocus={() => setShowEmojiPicker(false)}
+                        placeholder="Type a message..."
+                        className="w-full px-4 py-3 pr-12 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-pink-500 focus:border-pink-500 transition-all"
+                        maxLength={1000}
+                      />
+                      {newMessage.length > 0 && (
+                        <button
+                          type="button"
+                          onClick={() => setNewMessage('')}
+                          className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 transition-colors p-1 rounded hover:bg-gray-100"
+                          aria-label="Clear message"
+                        >
+                          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                          </svg>
+                        </button>
+                      )}
+                    </div>
+                    
+                    {/* Send Button */}
                     <button
                       type="submit"
-                      className="px-6 py-3 bg-gradient-to-r from-pink-500 to-rose-500 text-white font-semibold rounded-lg hover:from-pink-600 hover:to-rose-600 transition-all shadow-md hover:shadow-lg"
+                      disabled={!newMessage.trim()}
+                      className="px-6 py-3 bg-gradient-to-r from-pink-500 to-rose-500 text-white font-semibold rounded-lg hover:from-pink-600 hover:to-rose-600 transition-all shadow-md hover:shadow-lg disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:shadow-md flex items-center gap-2"
                     >
-                      Send
+                      <span>Send</span>
+                      <svg 
+                        className="w-5 h-5" 
+                        fill="none" 
+                        stroke="currentColor" 
+                        viewBox="0 0 24 24"
+                      >
+                        <path 
+                          strokeLinecap="round" 
+                          strokeLinejoin="round" 
+                          strokeWidth={2} 
+                          d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" 
+                        />
+                      </svg>
                     </button>
                   </div>
+                  
+                  {/* Character Count (optional, for long messages) */}
+                  {newMessage.length > 800 && (
+                    <div className="text-xs text-gray-400 mt-1 text-right">
+                      {newMessage.length} / 1000
+                    </div>
+                  )}
                 </form>
               </div>
             ) : (

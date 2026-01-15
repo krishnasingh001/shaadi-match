@@ -124,7 +124,7 @@ const Dashboard = () => {
       if (response.data.message === 'Interest already sent') {
         toast.success('Interest already sent!');
       } else {
-        toast.success('Interest sent successfully!');
+      toast.success('Interest sent successfully!');
       }
       fetchStats(); // Refresh stats
     } catch (error) {
@@ -197,7 +197,7 @@ const Dashboard = () => {
           <div className="absolute -top-20 -right-20 w-96 h-96 bg-white/10 rounded-full blur-3xl"></div>
           <div className="absolute -bottom-20 -left-20 w-96 h-96 bg-purple-500/20 rounded-full blur-3xl"></div>
         </div>
-        
+
         <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16">
           <div className="flex flex-col lg:flex-row items-start lg:items-center justify-between gap-8">
             <div className="flex-1">
@@ -212,6 +212,9 @@ const Dashboard = () => {
                   </h1>
                 </div>
               </div>
+              <p className="text-pink-100 text-xl md:text-2xl font-semibold mb-3 italic">
+                Dating with intent. Marriage by choice.
+              </p>
               <p className="text-pink-100 text-lg md:text-xl max-w-2xl">
                 {suggestedMatches.length > 0 
                   ? `✨ We've curated ${suggestedMatches.length} perfect matches just for you`
@@ -278,7 +281,7 @@ const Dashboard = () => {
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
                     </svg>
                   </div>
-                  <div>
+              <div>
                     <h3 className="text-2xl md:text-3xl font-bold mb-1">Complete Your Profile</h3>
                     <p className="text-pink-100 text-base md:text-lg">Unlock personalized matches and increase your chances of finding the perfect match</p>
                   </div>
@@ -354,7 +357,7 @@ const Dashboard = () => {
               </div>
             </Link>
 
-            <Link 
+                  <Link
               to="/favorites" 
               className="bg-white rounded-2xl p-6 shadow-lg hover:shadow-2xl transition-all duration-300 border border-gray-100 hover:border-yellow-300 group relative overflow-hidden"
             >
@@ -377,7 +380,7 @@ const Dashboard = () => {
                   </svg>
                 </div>
               </div>
-            </Link>
+                  </Link>
 
             <Link 
               to="/messages" 

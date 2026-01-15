@@ -63,6 +63,7 @@ const Search = () => {
   const [heartAnimations, setHeartAnimations] = useState({});
   const [currentImageIndices, setCurrentImageIndices] = useState({});
   const [touchPositions, setTouchPositions] = useState({});
+  const [searchQuery, setSearchQuery] = useState('');
   const [filters, setFilters] = useState({
     min_age: '',
     max_age: '',
@@ -131,6 +132,11 @@ const Search = () => {
     try {
       // Build params object, only including non-empty filter values
       const params = { page };
+      
+      // Add search query if present
+      if (searchQuery && searchQuery.trim()) {
+        params.query = searchQuery.trim();
+      }
       
       // Add filters only if they have values
       if (filters.min_age && filters.min_age.trim()) params.min_age = filters.min_age.trim();
@@ -282,29 +288,64 @@ const Search = () => {
     }
   };
 
-  // Super Like (treat as special interest)
+  // Super Like (treat as special interest + add to favorites)
   const handleSuperLike = async (userId, profileId) => {
     setLoadingActions(prev => ({ ...prev, [profileId]: 'superLike' }));
     
     try {
+      // Send interest (Super Like)
       const response = await api.post('/interests', { receiver_id: userId });
       trackAction('superLike', profileId, { userId });
+      
+      // Also add to favorites
+      try {
+        await api.post('/favorites', { user_id: userId });
+        toast.success('Super Like sent & added to favorites! ⭐', {
+          duration: 4000,
+        });
+      } catch (favoriteError) {
+        // If already in favorites, that's okay - just show the super like message
+        if (favoriteError.response?.data?.message === 'Already in favorites' || 
+            favoriteError.response?.data?.errors?.[0]?.includes('already')) {
+          toast.success('Super Like sent! ⭐ (Already in favorites)', {
+            duration: 4000,
+          });
+        } else {
+          // Super like succeeded but favorite failed - still show success for super like
+          toast.success('Super Like sent! ⭐', {
+            duration: 4000,
+          });
+        }
+      }
       
       // Remove from current view after super like
       setProfiles(prev => prev.filter(p => p.user_id !== userId));
       
-      // Show appropriate message
       if (response.data.message === 'Interest already sent') {
-        toast.success('Super Like already sent! ⭐');
-      } else {
-        toast.success('Super Like sent! ⭐');
+        // Still try to add to favorites even if interest was already sent
+        try {
+          await api.post('/favorites', { user_id: userId });
+          toast.success('Added to favorites! ⭐', {
+            duration: 4000,
+          });
+        } catch (favoriteError) {
+          // Ignore if already in favorites
+        }
       }
     } catch (error) {
       const errorMessage = error.response?.data?.errors?.[0] || 'Failed to send super like';
       
       // Handle specific error messages more gracefully
       if (errorMessage.includes('already been taken') || errorMessage.includes('already sent')) {
-        toast.success('Super Like already sent! ⭐');
+        // Try to add to favorites even if interest was already sent
+        try {
+          await api.post('/favorites', { user_id: userId });
+          toast.success('Added to favorites! ⭐', {
+            duration: 4000,
+          });
+        } catch (favoriteError) {
+          // Ignore if already in favorites
+        }
         // Still remove from view since interest exists
         setProfiles(prev => prev.filter(p => p.user_id !== userId));
       } else {
@@ -362,20 +403,87 @@ const Search = () => {
 
   return (
     <div className="min-h-screen bg-gray-50">
-      {/* Header Section */}
-      <div className="bg-white border-b border-gray-200">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
-          <div className="flex items-center justify-between">
-            <div>
-              <h1 className="text-3xl font-bold text-gray-900">Discover Profiles</h1>
-              <p className="text-sm text-gray-500 mt-1">Browse all available profiles and find your perfect match</p>
+      {/* Search Bar Header */}
+      <div className="bg-white border-b border-gray-200 shadow-sm sticky top-0 z-40">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
+          <div className="flex items-center gap-3">
+            {/* Search Bar */}
+            <div className="flex-1 relative">
+              <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
+                <svg className="h-5 w-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                </svg>
+              </div>
+              <input
+                type="text"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                onKeyPress={(e) => {
+                  if (e.key === 'Enter') {
+                    setPage(1);
+                    searchProfiles();
+                  }
+                }}
+                placeholder="Search by name, profession, city, education..."
+                className={`block w-full pl-12 ${searchQuery ? 'pr-24' : 'pr-20'} py-3.5 border border-gray-300 rounded-xl bg-white text-gray-900 placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-pink-500 focus:border-pink-500 transition-all duration-200 shadow-sm hover:shadow-md`}
+              />
+              {searchQuery && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setSearchQuery('');
+                    setPage(1);
+                    searchProfiles();
+                  }}
+                  className="absolute inset-y-0 right-20 pr-3 flex items-center hover:bg-gray-50 rounded-r-xl transition-colors z-10"
+                >
+                  <svg className="h-5 w-5 text-gray-400 hover:text-gray-600 transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                  </svg>
+                </button>
+              )}
+              <button
+                type="button"
+                onClick={() => {
+                  setPage(1);
+                  searchProfiles();
+                }}
+                className="absolute inset-y-0 right-2 flex items-center z-10"
+              >
+                <div className="px-4 py-2 bg-gradient-to-r from-pink-500 to-rose-500 text-white text-sm font-semibold rounded-lg hover:from-pink-600 hover:to-rose-600 transition-all shadow-md hover:shadow-lg cursor-pointer">
+                  Search
+                </div>
+              </button>
             </div>
-            <button
-              onClick={() => setShowFilters(!showFilters)}
-              className="lg:hidden px-4 py-2 bg-pink-600 text-white text-sm font-medium hover:bg-pink-700 transition-colors"
-            >
-              {showFilters ? 'Hide Filters' : 'Show Filters'}
-            </button>
+            
+            {/* Filter Button (Mobile) */}
+            <div className="lg:hidden flex-shrink-0">
+              <button
+                onClick={() => setShowFilters(!showFilters)}
+                className="relative px-4 py-3.5 bg-gradient-to-r from-pink-500 to-rose-500 text-white text-sm font-semibold rounded-xl shadow-md hover:shadow-lg transition-all duration-200 hover:scale-105 active:scale-95 flex items-center gap-2"
+              >
+                <svg className={`w-5 h-5 transition-transform duration-200 ${showFilters ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z" />
+                </svg>
+                <span className="hidden sm:inline">{showFilters ? 'Hide' : 'Filters'}</span>
+                {!showFilters && Object.values(filters).some(v => v && v.toString().trim()) && (
+                  <span className="absolute -top-1 -right-1 w-5 h-5 bg-white text-pink-600 rounded-full text-xs font-bold flex items-center justify-center border-2 border-pink-500">
+                    {Object.values(filters).filter(v => v && v.toString().trim()).length}
+                  </span>
+                )}
+              </button>
+            </div>
+            
+            {/* Profile Count (Desktop) */}
+            {totalCount > 0 && (
+              <div className="hidden lg:flex items-center gap-2 px-4 py-2 bg-pink-50 rounded-xl border border-pink-100 flex-shrink-0">
+                <svg className="w-5 h-5 text-pink-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
+                </svg>
+                <span className="text-sm font-bold text-pink-700">{totalCount}</span>
+                <span className="text-xs text-gray-600">profiles</span>
+              </div>
+            )}
           </div>
         </div>
       </div>
@@ -842,10 +950,10 @@ const Search = () => {
                                     </svg>
                                     <span className="font-medium">{profile.profession}</span>
                                   </div>
-                                )}
-                              </div>
+                        )}
+                      </div>
                             </div>
-                          </div>
+                      </div>
                         );
                       })()}
 
@@ -974,15 +1082,15 @@ const Search = () => {
                 
                 {/* Enhanced Pagination */}
                 {totalPages > 1 && (
-                  <div className="bg-white rounded-2xl shadow-lg border border-gray-100 px-6 py-5">
-                    <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
+                  <div className="bg-white rounded-2xl shadow-lg border border-gray-100 px-4 sm:px-6 py-4 sm:py-5">
+                    <div className="flex flex-col xl:flex-row items-center justify-between gap-4">
                       {/* Results Info */}
-                      <div className="text-sm text-gray-600 font-medium">
+                      <div className="text-sm text-gray-600 font-medium whitespace-nowrap order-3 xl:order-1">
                         Showing <span className="font-bold text-gray-900">{profiles.length}</span> of <span className="font-bold text-gray-900">{totalCount || 'many'}</span> profiles
                       </div>
 
-                      {/* Pagination Controls */}
-                      <div className="flex items-center gap-2">
+                      {/* Pagination Controls - All in one line */}
+                      <div className="flex items-center gap-2 flex-wrap justify-center order-1 xl:order-2">
                         {/* First Page */}
                         <button
                           onClick={() => setPage(1)}
@@ -1098,9 +1206,9 @@ const Search = () => {
                       </div>
 
                       {/* Page Input - Quick Jump */}
-                      <div className="flex items-center gap-2">
-                        <span className="text-sm text-gray-600 font-medium hidden md:inline">Go to:</span>
-                        <div className="flex items-center gap-1">
+                      <div className="flex items-center gap-2 ml-0 xl:ml-4 xl:pl-4 xl:border-l xl:border-gray-200 order-2 xl:order-3">
+                        <span className="text-sm text-gray-600 font-medium whitespace-nowrap">Go to:</span>
+                        <div className="flex items-center gap-1.5">
                           <input
                             type="number"
                             min="1"
@@ -1120,9 +1228,9 @@ const Search = () => {
                                 }
                               }
                             }}
-                            className="w-16 px-3 py-2 text-sm font-semibold text-center border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-pink-500 focus:border-pink-500 transition-all"
+                            className="w-14 px-2 py-2 text-sm font-semibold text-center border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-pink-500 focus:border-pink-500 transition-all bg-white"
                           />
-                          <span className="text-sm text-gray-500 font-medium">/ {totalPages}</span>
+                          <span className="text-sm text-gray-500 font-medium whitespace-nowrap">/ {totalPages}</span>
                         </div>
                       </div>
                     </div>

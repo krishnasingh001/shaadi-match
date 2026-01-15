@@ -113,18 +113,7 @@ const Favorites = () => {
     });
   }, [favorites, getAllProfileImages]);
 
-  useEffect(() => {
-    fetchFavorites();
-  }, []);
-
-  // Refresh favorites when location changes (e.g., returning from adding a favorite)
-  useEffect(() => {
-    if (location.pathname === '/favorites') {
-      fetchFavorites();
-    }
-  }, [location.pathname]);
-
-  const fetchFavorites = async () => {
+  const fetchFavorites = useCallback(async () => {
     setLoading(true);
     try {
       const response = await api.get('/favorites');
@@ -137,7 +126,30 @@ const Favorites = () => {
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
+
+  useEffect(() => {
+    fetchFavorites();
+  }, [fetchFavorites]);
+
+  // Refresh favorites when location changes (e.g., returning from adding a favorite)
+  useEffect(() => {
+    if (location.pathname === '/favorites') {
+      fetchFavorites();
+    }
+  }, [location.pathname, fetchFavorites]);
+
+  // Listen for focus events to refresh when user returns to the tab/page
+  useEffect(() => {
+    const handleFocus = () => {
+      if (location.pathname === '/favorites') {
+        fetchFavorites();
+      }
+    };
+    
+    window.addEventListener('focus', handleFocus);
+    return () => window.removeEventListener('focus', handleFocus);
+  }, [location.pathname, fetchFavorites]);
 
   const removeFavorite = async (userId, favoriteId) => {
     // Optimistic update
