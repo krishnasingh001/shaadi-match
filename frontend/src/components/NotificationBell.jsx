@@ -15,17 +15,75 @@ const NotificationBell = () => {
   const dropdownRef = useRef(null);
   const pollingIntervalRef = useRef(null);
 
+  // Group notifications by actor and type (especially for messages)
+  const groupNotifications = useCallback((notifications) => {
+    const grouped = [];
+    const messageGroups = {}; // Group messages from same user
+    
+    notifications.forEach(notification => {
+      // Group messages from the same user (only unread ones to keep it clean)
+      if (notification.notification_type === 'new_message' && notification.actor?.id) {
+        const key = `message-${notification.actor.id}`;
+        if (!messageGroups[key]) {
+          messageGroups[key] = {
+            ...notification,
+            groupedCount: 1,
+            groupedMessages: [notification],
+            latestMessage: notification,
+            isGrouped: true,
+            // Use the first notification's ID as the group ID for dismissal
+            groupId: notification.id
+          };
+        } else {
+          messageGroups[key].groupedCount += 1;
+          messageGroups[key].groupedMessages.push(notification);
+          // Keep the latest message
+          if (new Date(notification.created_at) > new Date(messageGroups[key].latestMessage.created_at)) {
+            messageGroups[key].latestMessage = notification;
+          }
+          // Update title and message for grouped notification
+          const senderName = notification.actor?.name || 'Someone';
+          messageGroups[key].title = `${messageGroups[key].groupedCount} new messages`;
+          messageGroups[key].message = `${senderName}: ${notification.message}`;
+          messageGroups[key].created_at = notification.created_at; // Use latest timestamp
+          // If any in group is unread, mark as unread
+          if (!notification.read) {
+            messageGroups[key].read = false;
+          }
+        }
+      } else {
+        // For non-message notifications, add directly
+        grouped.push(notification);
+      }
+    });
+    
+    // Add grouped messages
+    Object.values(messageGroups).forEach(group => {
+      grouped.push(group);
+    });
+    
+    // Sort by created_at (newest first)
+    return grouped.sort((a, b) => {
+      const dateA = new Date(a.created_at || a.latestMessage?.created_at);
+      const dateB = new Date(b.created_at || b.latestMessage?.created_at);
+      return dateB - dateA;
+    });
+  }, []);
+
   const fetchNotifications = useCallback(async () => {
     if (!user) return;
     
     try {
       const response = await api.get('/notifications');
-      setNotifications(response.data.notifications || []);
+      const rawNotifications = response.data.notifications || [];
+      // Group notifications before setting state
+      const grouped = groupNotifications(rawNotifications);
+      setNotifications(grouped);
       setUnreadCount(response.data.unread_count || 0);
     } catch (error) {
       console.error('Failed to fetch notifications:', error);
     }
-  }, [user]);
+  }, [user, groupNotifications]);
 
   useEffect(() => {
     if (user) {
@@ -75,6 +133,47 @@ const NotificationBell = () => {
       setUnreadCount(0);
     } catch (error) {
       console.error('Failed to mark all as read:', error);
+    }
+  };
+
+  const dismissNotification = async (e, notification) => {
+    e.stopPropagation(); // Prevent notification click
+    
+    // If it's a grouped notification, dismiss all notifications in the group
+    const notificationIds = notification.isGrouped && notification.groupedMessages
+      ? notification.groupedMessages.map(n => n.id)
+      : [notification.id];
+    
+    // Optimistic update - remove immediately
+    const notificationToRemove = notifications.find(n => n.id === notification.id);
+    const unreadCountInGroup = notification.isGrouped 
+      ? notification.groupedMessages.filter(n => !n.read).length 
+      : (!notification.read ? 1 : 0);
+    
+    setNotifications(prev => prev.filter(n => n.id !== notification.id));
+    setUnreadCount(prev => Math.max(0, prev - unreadCountInGroup));
+    
+    try {
+      // Delete all notifications in the group
+      await Promise.all(notificationIds.map(id => api.delete(`/notifications/${id}`)));
+      // Refresh to get accurate unread count
+      setTimeout(() => {
+        fetchNotifications();
+      }, 300);
+    } catch (error) {
+      // Restore on error
+      if (notificationToRemove) {
+        setNotifications(prev => {
+          const restored = [...prev, notificationToRemove];
+          return restored.sort((a, b) => {
+            const dateA = new Date(a.created_at || a.latestMessage?.created_at);
+            const dateB = new Date(b.created_at || b.latestMessage?.created_at);
+            return dateB - dateA;
+          });
+        });
+        setUnreadCount(prev => prev + unreadCountInGroup);
+      }
+      toast.error('Failed to dismiss notification');
     }
   };
 
@@ -185,7 +284,10 @@ const NotificationBell = () => {
     } else if (notification.notification_type === 'favorited') {
       navigate('/favorites');
     } else if (notification.notification_type === 'new_message') {
-      const conversationId = notification.metadata?.conversation_id;
+      // For grouped messages, use the latest message's conversation ID
+      const conversationId = notification.isGrouped 
+        ? notification.latestMessage?.metadata?.conversation_id 
+        : notification.metadata?.conversation_id;
       if (conversationId) {
         navigate(`/messages?conversation=${conversationId}`);
       } else {
@@ -323,7 +425,7 @@ const NotificationBell = () => {
                 return (
                   <div
                     key={notification.id}
-                    className={`w-full px-5 py-3.5 border-b border-gray-50 transition-all duration-200 ${
+                    className={`group w-full px-5 py-3.5 border-b border-gray-50 transition-all duration-200 ${
                       !notification.read ? 'bg-gradient-to-r from-pink-50/80 to-rose-50/50 hover:from-pink-50 hover:to-rose-50' : 'hover:bg-gray-50/50'
                     } ${
                       isInterestReceived && !showActions ? 'cursor-default' : 'cursor-pointer'
@@ -347,19 +449,42 @@ const NotificationBell = () => {
                       </div>
 
                       {/* Content */}
-                      <div className="flex-1 min-w-0">
+                      <div className="flex-1 min-w-0 relative">
                         <div className="flex items-start justify-between gap-2 mb-1.5">
-                          <div className="flex-1 min-w-0">
-                            <p className="text-sm font-semibold text-gray-900 mb-0.5 truncate">
-                              {notification.title}
-                            </p>
+                          <div className="flex-1 min-w-0 pr-8">
+                            <div className="flex items-center gap-2 mb-0.5">
+                              <p className="text-sm font-semibold text-gray-900 truncate">
+                                {notification.title}
+                              </p>
+                              {notification.isGrouped && notification.groupedCount > 1 && (
+                                <span className="px-2 py-0.5 bg-gradient-to-r from-blue-500 to-blue-600 text-white rounded-full text-xs font-bold shadow-sm flex-shrink-0">
+                                  {notification.groupedCount}
+                                </span>
+                              )}
+                            </div>
                             <p className="text-xs text-gray-600 line-clamp-2 leading-relaxed">
                               {notification.message}
                             </p>
                           </div>
-                          {!notification.read && (
-                            <div className="flex-shrink-0 w-2 h-2 bg-pink-500 rounded-full mt-1.5 animate-pulse"></div>
-                          )}
+                          <div className="flex items-center gap-2 flex-shrink-0">
+                            {!notification.read && (
+                              <div className="w-2 h-2 bg-pink-500 rounded-full animate-pulse"></div>
+                            )}
+                            {/* Dismiss Button - Always visible */}
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                dismissNotification(e, notification);
+                              }}
+                              className="p-1.5 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-full transition-all duration-200 opacity-70 hover:opacity-100 flex-shrink-0"
+                              aria-label="Dismiss notification"
+                              title="Dismiss"
+                            >
+                              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M6 18L18 6M6 6l12 12" />
+                              </svg>
+                            </button>
+                          </div>
                         </div>
                         
                         {/* Action Buttons - Compact One-Liner */}

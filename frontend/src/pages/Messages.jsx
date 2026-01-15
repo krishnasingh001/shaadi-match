@@ -64,17 +64,27 @@ const Messages = () => {
 
   // Auto-scroll to bottom - only when explicitly needed
   const scrollToBottom = (force = false) => {
+    const container = messagesContainerRef.current;
+    if (!container) return;
+
     if (force) {
-      // Force scroll (user sent message)
+      // Force scroll (user sent message) - use scrollTop to avoid page scroll
       userScrolledUpRef.current = false;
-      setTimeout(() => {
-        messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-      }, 50);
+      // Use requestAnimationFrame for smooth scroll without affecting page
+      requestAnimationFrame(() => {
+        container.scrollTo({
+          top: container.scrollHeight,
+          behavior: 'smooth'
+        });
+      });
     } else if (isAtBottom() && !userScrolledUpRef.current) {
       // Only auto-scroll if user is at bottom and hasn't scrolled up
-      setTimeout(() => {
-        messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-      }, 50);
+      requestAnimationFrame(() => {
+        container.scrollTo({
+          top: container.scrollHeight,
+          behavior: 'smooth'
+        });
+      });
     }
   };
 
