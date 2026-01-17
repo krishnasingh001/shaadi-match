@@ -203,17 +203,17 @@ const Favorites = () => {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-50 via-pink-50/30 to-purple-50/30 py-12 px-4 sm:px-6 lg:px-8">
+    <div className="min-h-screen bg-gradient-to-br from-gray-50 via-pink-50/30 to-purple-50/30 py-6 sm:py-8 lg:py-12 px-4 sm:px-6 lg:px-8">
       <div className="max-w-7xl mx-auto">
         {/* Header */}
-        <div className="mb-8">
-          <div className="flex items-center justify-between mb-4">
+        <div className="mb-6 sm:mb-8">
+          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 sm:gap-4 mb-4">
             <div>
-              <h1 className="text-4xl font-bold text-gray-900 mb-2">My Favorites</h1>
-              <p className="text-gray-600">People you've marked as favorites</p>
+              <h1 className="text-2xl sm:text-3xl lg:text-4xl font-bold text-gray-900 mb-1 sm:mb-2">My Favorites</h1>
+              <p className="text-sm sm:text-base text-gray-600">People you've marked as favorites</p>
             </div>
             <div className="flex items-center gap-3">
-              <span className="bg-gradient-to-r from-pink-500 to-rose-500 text-white px-4 py-2 rounded-full text-sm font-bold shadow-lg">
+              <span className="bg-gradient-to-r from-pink-500 to-rose-500 text-white px-3 sm:px-4 py-1.5 sm:py-2 rounded-full text-xs sm:text-sm font-bold shadow-lg">
                 {favorites.length} {favorites.length === 1 ? 'Favorite' : 'Favorites'}
               </span>
             </div>
@@ -221,7 +221,7 @@ const Favorites = () => {
         </div>
 
         {processedFavorites.length > 0 ? (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
             {processedFavorites.map((favoriteData) => {
               const { user, profile, userId, displayName, images, hasMultipleImages } = favoriteData;
               
@@ -288,10 +288,10 @@ const Favorites = () => {
               };
 
               return (
-                <div key={favoriteData.id} className="bg-white rounded-2xl shadow-lg border border-gray-100 overflow-hidden hover:shadow-xl transition-all duration-300 group">
+                <div key={favoriteData.id} className="bg-white rounded-xl sm:rounded-2xl shadow-lg border border-gray-100 overflow-hidden hover:shadow-xl transition-all duration-300 group">
                   {/* Image Carousel */}
                   <div 
-                    className="relative h-[450px] bg-gradient-to-br from-pink-50 to-purple-50 select-none group/image-carousel"
+                    className="relative h-[300px] sm:h-[350px] md:h-[400px] lg:h-[450px] bg-gradient-to-br from-pink-50 to-purple-50 select-none group/image-carousel"
                     onTouchStart={handleTouchStart}
                     onTouchMove={handleTouchMove}
                     onTouchEnd={handleTouchEnd}
@@ -427,7 +427,7 @@ const Favorites = () => {
                           <div className="w-2.5 h-2.5 bg-green-500 rounded-full animate-pulse"></div>
                           <span className="text-gray-700 text-xs font-semibold">Active Now</span>
                         </div>
-                      </div>
+                  </div>
                     )}
 
                     {/* Info Overlay */}
@@ -439,7 +439,7 @@ const Favorites = () => {
                           style={{ textShadow: '0 2px 4px rgba(0,0,0,0.5)' }}
                         >
                           {safeDisplayName}
-                        </h3>
+                  </h3>
                         {profile?.age && (
                           <span className="text-white/90 text-base font-medium whitespace-nowrap flex-shrink-0">{profile.age} years</span>
                         )}
@@ -474,7 +474,7 @@ const Favorites = () => {
                   {/* Action Buttons */}
                   <div className="bg-white px-6 py-6 border-t border-gray-100">
                     <div className="flex items-center gap-3">
-                      <Link
+                    <Link
                         to={`/profile/${userId}`}
                         className="flex-1 px-6 py-3.5 bg-white border-2 border-gray-200 hover:border-pink-300 hover:bg-pink-50 rounded-xl flex items-center justify-center gap-2 transition-all duration-200 shadow-sm hover:shadow-md text-gray-700 hover:text-pink-600 font-semibold"
                       >
@@ -483,8 +483,8 @@ const Favorites = () => {
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
                         </svg>
                         <span>View Profile</span>
-                      </Link>
-                      <button
+                    </Link>
+                    <button
                         onClick={() => handleMessage(userId)}
                         className="flex-1 px-6 py-3.5 bg-gradient-to-r from-pink-500 to-rose-500 hover:from-pink-600 hover:to-rose-600 rounded-xl flex items-center justify-center gap-2 transition-all duration-200 shadow-lg hover:shadow-xl text-white font-semibold"
                       >
@@ -501,7 +501,7 @@ const Favorites = () => {
                         <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M6 18L18 6M6 6l12 12" />
                         </svg>
-                      </button>
+                    </button>
                     </div>
                   </div>
                 </div>

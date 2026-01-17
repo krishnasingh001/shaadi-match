@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import NotificationBell from './NotificationBell';
@@ -5,20 +6,22 @@ import NotificationBell from './NotificationBell';
 const Layout = ({ children }) => {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   const handleLogout = async () => {
     await logout();
     navigate('/');
+    setMobileMenuOpen(false);
   };
 
   return (
     <div className="min-h-screen">
-      <nav className="bg-white shadow-md">
+      <nav className="bg-white shadow-md sticky top-0 z-50">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center h-16">
-            <Link to="/" className="flex items-center gap-3 group">
+            <Link to="/" className="flex items-center gap-2 sm:gap-3 group" onClick={() => setMobileMenuOpen(false)}>
               {/* 2-Color Heart Logo */}
-              <div className="w-10 h-10 flex-shrink-0">
+              <div className="w-8 h-8 sm:w-10 sm:h-10 flex-shrink-0">
                 <svg className="w-full h-full drop-shadow-lg group-hover:scale-110 transition-transform duration-300" viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg">
                   <defs>
                     <linearGradient id="navHeartGradient" x1="0%" y1="0%" x2="100%" y2="100%">
@@ -40,7 +43,7 @@ const Layout = ({ children }) => {
                 </svg>
               </div>
               <div className="flex flex-col">
-                <span className="text-2xl font-bold bg-gradient-to-r from-pink-600 to-rose-600 bg-clip-text text-transparent">
+                <span className="text-lg sm:text-xl md:text-2xl font-bold bg-gradient-to-r from-pink-600 to-rose-600 bg-clip-text text-transparent">
                   PairPerfectly
                 </span>
                 <span className="text-xs font-medium text-gray-500 italic -mt-1 hidden sm:block">
@@ -49,45 +52,133 @@ const Layout = ({ children }) => {
               </div>
             </Link>
             
-            <div className="flex items-center space-x-4">
+            {/* Desktop Navigation */}
+            <div className="hidden lg:flex items-center space-x-4">
               {user ? (
                 <>
-                  <Link to="/dashboard" className="text-gray-700 hover:text-pink-600 px-3 py-2 transition-colors">
+                  <Link to="/dashboard" className="text-gray-700 hover:text-pink-600 px-3 py-2 transition-colors text-sm">
                     Dashboard
                   </Link>
-                  <Link to="/profile" className="text-gray-700 hover:text-pink-600 px-3 py-2 transition-colors">
+                  <Link to="/profile" className="text-gray-700 hover:text-pink-600 px-3 py-2 transition-colors text-sm">
                     My Profile
                   </Link>
-                  <Link to="/search" className="text-gray-700 hover:text-pink-600 px-3 py-2 transition-colors">
-                    Discover Profiles
+                  <Link to="/search" className="text-gray-700 hover:text-pink-600 px-3 py-2 transition-colors text-sm">
+                    Discover
                   </Link>
-                  <Link to="/favorites" className="text-gray-700 hover:text-pink-600 px-3 py-2 transition-colors">
+                  <Link to="/favorites" className="text-gray-700 hover:text-pink-600 px-3 py-2 transition-colors text-sm">
                     Favorites
                   </Link>
-                  <Link to="/messages" className="text-gray-700 hover:text-pink-600 px-3 py-2 transition-colors">
+                  <Link to="/messages" className="text-gray-700 hover:text-pink-600 px-3 py-2 transition-colors text-sm">
                     Messages
                   </Link>
-                  {/* Notification Bell */}
                   <NotificationBell />
                   <button
                     onClick={handleLogout}
-                    className="btn-secondary text-sm"
+                    className="btn-secondary text-sm px-3 py-1.5"
                   >
                     Logout
                   </button>
                 </>
               ) : (
                 <>
-                  <Link to="/login" className="text-gray-700 hover:text-pink-600 px-3 py-2 transition-colors">
+                  <Link to="/login" className="text-gray-700 hover:text-pink-600 px-3 py-2 transition-colors text-sm">
                     Login
                   </Link>
-                  <Link to="/signup" className="btn-primary text-sm">
+                  <Link to="/signup" className="btn-primary text-sm px-4 py-1.5">
                     Sign Up
                   </Link>
                 </>
               )}
             </div>
+
+            {/* Mobile Menu Button */}
+            <div className="lg:hidden flex items-center gap-2">
+              {user && <NotificationBell />}
+              <button
+                onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+                className="p-2 rounded-md text-gray-700 hover:text-pink-600 hover:bg-pink-50 transition-colors"
+                aria-label="Toggle menu"
+              >
+                {mobileMenuOpen ? (
+                  <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                  </svg>
+                ) : (
+                  <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
+                  </svg>
+                )}
+              </button>
+            </div>
           </div>
+
+          {/* Mobile Menu */}
+          {mobileMenuOpen && (
+            <div className="lg:hidden border-t border-gray-200 py-4 animate-in slide-in-from-top duration-200">
+              {user ? (
+                <div className="flex flex-col space-y-2">
+                  <Link
+                    to="/dashboard"
+                    className="text-gray-700 hover:text-pink-600 px-4 py-2 rounded-md hover:bg-pink-50 transition-colors"
+                    onClick={() => setMobileMenuOpen(false)}
+                  >
+                    Dashboard
+                  </Link>
+                  <Link
+                    to="/profile"
+                    className="text-gray-700 hover:text-pink-600 px-4 py-2 rounded-md hover:bg-pink-50 transition-colors"
+                    onClick={() => setMobileMenuOpen(false)}
+                  >
+                    My Profile
+                  </Link>
+                  <Link
+                    to="/search"
+                    className="text-gray-700 hover:text-pink-600 px-4 py-2 rounded-md hover:bg-pink-50 transition-colors"
+                    onClick={() => setMobileMenuOpen(false)}
+                  >
+                    Discover Profiles
+                  </Link>
+                  <Link
+                    to="/favorites"
+                    className="text-gray-700 hover:text-pink-600 px-4 py-2 rounded-md hover:bg-pink-50 transition-colors"
+                    onClick={() => setMobileMenuOpen(false)}
+                  >
+                    Favorites
+                  </Link>
+                  <Link
+                    to="/messages"
+                    className="text-gray-700 hover:text-pink-600 px-4 py-2 rounded-md hover:bg-pink-50 transition-colors"
+                    onClick={() => setMobileMenuOpen(false)}
+                  >
+                    Messages
+                  </Link>
+                  <button
+                    onClick={handleLogout}
+                    className="btn-secondary text-sm px-4 py-2 text-left mt-2"
+                  >
+                    Logout
+                  </button>
+                </div>
+              ) : (
+                <div className="flex flex-col space-y-2">
+                  <Link
+                    to="/login"
+                    className="text-gray-700 hover:text-pink-600 px-4 py-2 rounded-md hover:bg-pink-50 transition-colors"
+                    onClick={() => setMobileMenuOpen(false)}
+                  >
+                    Login
+                  </Link>
+                  <Link
+                    to="/signup"
+                    className="btn-primary text-sm px-4 py-2 text-center"
+                    onClick={() => setMobileMenuOpen(false)}
+                  >
+                    Sign Up
+                  </Link>
+                </div>
+              )}
+            </div>
+          )}
         </div>
       </nav>
       

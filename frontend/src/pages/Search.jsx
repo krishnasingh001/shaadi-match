@@ -424,8 +424,8 @@ const Search = () => {
                     searchProfiles();
                   }
                 }}
-                placeholder="Search by name, profession, city, education..."
-                className={`block w-full pl-12 ${searchQuery ? 'pr-24' : 'pr-20'} py-3.5 border border-gray-300 rounded-xl bg-white text-gray-900 placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-pink-500 focus:border-pink-500 transition-all duration-200 shadow-sm hover:shadow-md`}
+                placeholder="Search by name, profession..."
+                className={`block w-full pl-10 sm:pl-12 ${searchQuery ? 'pr-20 sm:pr-24' : 'pr-16 sm:pr-20'} py-2.5 sm:py-3.5 border border-gray-300 rounded-xl bg-white text-sm sm:text-base text-gray-900 placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-pink-500 focus:border-pink-500 transition-all duration-200 shadow-sm hover:shadow-md`}
               />
               {searchQuery && (
                 <button
@@ -450,8 +450,11 @@ const Search = () => {
                 }}
                 className="absolute inset-y-0 right-2 flex items-center z-10"
               >
-                <div className="px-4 py-2 bg-gradient-to-r from-pink-500 to-rose-500 text-white text-sm font-semibold rounded-lg hover:from-pink-600 hover:to-rose-600 transition-all shadow-md hover:shadow-lg cursor-pointer">
-                  Search
+                <div className="px-3 sm:px-4 py-1.5 sm:py-2 bg-gradient-to-r from-pink-500 to-rose-500 text-white text-xs sm:text-sm font-semibold rounded-lg hover:from-pink-600 hover:to-rose-600 transition-all shadow-md hover:shadow-lg cursor-pointer">
+                  <span className="hidden sm:inline">Search</span>
+                  <svg className="w-4 h-4 sm:hidden" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                  </svg>
                 </div>
               </button>
             </div>
@@ -658,7 +661,7 @@ const Search = () => {
                 </div>
 
                 {/* Profile Cards Grid */}
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6 mb-6 sm:mb-8">
                   {profiles.map((profile) => (
                     <div 
                       key={profile.id} 
@@ -730,7 +733,7 @@ const Search = () => {
                         
                         return (
                           <div 
-                            className="relative h-[450px] bg-gradient-to-br from-pink-50 to-purple-50 group/image-carousel select-none" 
+                            className="relative h-[350px] sm:h-[400px] md:h-[450px] bg-gradient-to-br from-pink-50 to-purple-50 group/image-carousel select-none" 
                             style={{ position: 'relative', isolation: 'isolate' }}
                             onTouchStart={handleTouchStart}
                             onTouchMove={handleTouchMove}
@@ -958,13 +961,13 @@ const Search = () => {
                       })()}
 
                       {/* Action Buttons */}
-                      <div className="bg-white px-6 py-6 border-t border-gray-100">
+                      <div className="bg-white px-4 sm:px-6 py-4 sm:py-6 border-t border-gray-100">
                         {profile.interest_accepted ? (
                           /* Connected Profile - Clean, focused design */
                           <div className="flex items-center justify-between gap-4">
                         <Link
                           to={`/profile/${profile.user_id}`}
-                              className="flex-1 px-6 py-3.5 bg-white border-2 border-gray-200 hover:border-pink-300 hover:bg-pink-50 rounded-xl flex items-center justify-center gap-2 transition-all duration-200 shadow-sm hover:shadow-md text-gray-700 hover:text-pink-600 font-semibold"
+                              className="flex-1 px-4 sm:px-6 py-2.5 sm:py-3.5 bg-white border-2 border-gray-200 hover:border-pink-300 hover:bg-pink-50 rounded-xl flex items-center justify-center gap-2 transition-all duration-200 shadow-sm hover:shadow-md text-gray-700 hover:text-pink-600 font-semibold text-sm sm:text-base"
                             >
                               <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
@@ -975,7 +978,7 @@ const Search = () => {
                         <button
                               onClick={() => handleMessage(profile.user_id)}
                               disabled={loadingActions[profile.user_id] === 'message'}
-                              className="flex-1 px-6 py-3.5 bg-gradient-to-r from-pink-500 to-rose-500 hover:from-pink-600 hover:to-rose-600 rounded-xl flex items-center justify-center gap-2 transition-all duration-200 shadow-lg hover:shadow-xl text-white font-semibold disabled:opacity-50 disabled:cursor-not-allowed"
+                              className="flex-1 px-4 sm:px-6 py-2.5 sm:py-3.5 bg-gradient-to-r from-pink-500 to-rose-500 hover:from-pink-600 hover:to-rose-600 rounded-xl flex items-center justify-center gap-2 transition-all duration-200 shadow-lg hover:shadow-xl text-white font-semibold text-sm sm:text-base disabled:opacity-50 disabled:cursor-not-allowed"
                             >
                               {loadingActions[profile.user_id] === 'message' ? (
                                 <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
@@ -997,7 +1000,7 @@ const Search = () => {
                               <button 
                                 onClick={handleUndo}
                                 disabled={actionHistory.length === 0}
-                                className="w-12 h-12 bg-gray-50 hover:bg-gray-100 rounded-xl flex items-center justify-center transition-all duration-200 border border-gray-200 hover:border-gray-300 disabled:opacity-50 disabled:cursor-not-allowed"
+                                className="w-10 h-10 sm:w-12 sm:h-12 bg-gray-50 hover:bg-gray-100 rounded-xl flex items-center justify-center transition-all duration-200 border border-gray-200 hover:border-gray-300 disabled:opacity-50 disabled:cursor-not-allowed"
                                 title="Undo Last Action"
                               >
                                 <svg className="w-5 h-5 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -1007,7 +1010,7 @@ const Search = () => {
                               {/* Chat button - disabled for non-connected */}
                               <button 
                                 disabled={true}
-                                className="w-12 h-12 bg-gray-100 border border-gray-200 opacity-50 cursor-not-allowed rounded-xl flex items-center justify-center transition-all duration-200"
+                                className="w-10 h-10 sm:w-12 sm:h-12 bg-gray-100 border border-gray-200 opacity-50 cursor-not-allowed rounded-xl flex items-center justify-center transition-all duration-200"
                                 title="Connect first to message"
                               >
                                 <svg className="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -1021,7 +1024,7 @@ const Search = () => {
                               <button 
                                 onClick={() => handlePass(profile.user_id)}
                                 disabled={loadingActions[profile.user_id] === 'pass'}
-                                className="w-16 h-16 bg-white border-2 border-red-200 hover:border-red-400 hover:bg-red-50 rounded-2xl flex items-center justify-center transition-all duration-300 shadow-lg hover:shadow-xl hover:scale-110 active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed"
+                                className="w-12 h-12 sm:w-14 sm:h-14 md:w-16 md:h-16 bg-white border-2 border-red-200 hover:border-red-400 hover:bg-red-50 rounded-xl sm:rounded-2xl flex items-center justify-center transition-all duration-300 shadow-lg hover:shadow-xl hover:scale-110 active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed"
                                 title="Pass"
                               >
                                 {loadingActions[profile.user_id] === 'pass' ? (
@@ -1035,7 +1038,7 @@ const Search = () => {
                               <button 
                                 onClick={() => handleSuperLike(profile.user_id, profile.id)}
                                 disabled={loadingActions[profile.id] === 'superLike'}
-                                className="w-16 h-16 bg-white border-2 border-blue-200 hover:border-blue-400 hover:bg-blue-50 rounded-2xl flex items-center justify-center transition-all duration-300 shadow-lg hover:shadow-xl hover:scale-110 active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed"
+                                className="w-12 h-12 sm:w-14 sm:h-14 md:w-16 md:h-16 bg-white border-2 border-blue-200 hover:border-blue-400 hover:bg-blue-50 rounded-xl sm:rounded-2xl flex items-center justify-center transition-all duration-300 shadow-lg hover:shadow-xl hover:scale-110 active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed"
                                 title="Super Like"
                               >
                                 {loadingActions[profile.id] === 'superLike' ? (
@@ -1049,7 +1052,7 @@ const Search = () => {
                               <button 
                                 onClick={() => sendInterest(profile.user_id, profile.id)}
                                 disabled={loadingActions[profile.id] === 'like'}
-                                className="w-16 h-16 bg-gradient-to-br from-pink-500 to-rose-500 hover:from-pink-600 hover:to-rose-600 rounded-2xl flex items-center justify-center transition-all duration-300 shadow-lg hover:shadow-xl hover:scale-110 active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed"
+                                className="w-12 h-12 sm:w-14 sm:h-14 md:w-16 md:h-16 bg-gradient-to-br from-pink-500 to-rose-500 hover:from-pink-600 hover:to-rose-600 rounded-xl sm:rounded-2xl flex items-center justify-center transition-all duration-300 shadow-lg hover:shadow-xl hover:scale-110 active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed"
                                 title="Like"
                               >
                                 {loadingActions[profile.id] === 'like' ? (
@@ -1065,7 +1068,7 @@ const Search = () => {
                             {/* View Profile Link */}
                             <Link
                               to={`/profile/${profile.user_id}`}
-                              className="w-12 h-12 bg-gradient-to-br from-pink-500 to-rose-500 hover:from-pink-600 hover:to-rose-600 rounded-xl flex items-center justify-center transition-all duration-200 shadow-md hover:shadow-lg text-white"
+                              className="w-10 h-10 sm:w-12 sm:h-12 bg-gradient-to-br from-pink-500 to-rose-500 hover:from-pink-600 hover:to-rose-600 rounded-xl flex items-center justify-center transition-all duration-200 shadow-md hover:shadow-lg text-white"
                               title="View Full Profile"
                             >
                               <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">

@@ -42,10 +42,10 @@ const Signup = () => {
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50 py-12 px-4 sm:px-6 lg:px-8">
       <div className="max-w-md w-full">
         <div className="text-center mb-8">
-          <h2 className="text-4xl font-serif font-bold text-gray-900 mb-2">
+          <h2 className="text-2xl sm:text-3xl lg:text-4xl font-serif font-bold text-gray-900 mb-2">
             Create Account
           </h2>
-          <p className="text-gray-600">Start your journey to find your perfect match</p>
+          <p className="text-sm sm:text-base text-gray-600">Start your journey to find your perfect match</p>
         </div>
         
         <div className="card">

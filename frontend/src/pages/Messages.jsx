@@ -433,10 +433,10 @@ const Messages = () => {
         </div>
       </div>
 
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 sm:py-8">
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 sm:gap-6">
           {/* Sidebar */}
-          <div className="lg:col-span-1">
+          <div className={`lg:col-span-1 ${selectedConversation ? 'hidden lg:block' : 'block'}`}>
             <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
               {/* Tabs */}
               <div className="flex border-b border-gray-200">
@@ -603,9 +603,9 @@ const Messages = () => {
           </div>
 
           {/* Messages Area */}
-          <div className="lg:col-span-2">
+          <div className={`lg:col-span-2 ${selectedConversation ? 'block' : 'hidden lg:block'}`}>
             {selectedConversation ? (
-              <div className="bg-white rounded-xl shadow-sm border border-gray-100 flex flex-col h-[calc(100vh-200px)]">
+              <div className="bg-white rounded-xl shadow-sm border border-gray-100 flex flex-col h-[calc(100vh-180px)] sm:h-[calc(100vh-200px)]">
                 {/* Chat Header */}
                 <div className="border-b border-gray-200 p-4">
                   <div className="flex items-center gap-3">
@@ -637,9 +637,17 @@ const Messages = () => {
                         </p>
                       )}
                     </div>
+                    <button
+                      onClick={() => setSelectedConversation(null)}
+                      className="lg:hidden px-3 py-2 text-sm text-gray-600 hover:text-gray-900 hover:bg-gray-50 rounded-lg transition-colors"
+                    >
+                      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                      </svg>
+                    </button>
                     <Link
                       to={`/profile/${getOtherUser(selectedConversation).id}`}
-                      className="px-4 py-2 text-sm text-gray-600 hover:text-gray-900 hover:bg-gray-50 rounded-lg transition-colors"
+                      className="hidden lg:block px-4 py-2 text-sm text-gray-600 hover:text-gray-900 hover:bg-gray-50 rounded-lg transition-colors"
                     >
                       View Profile
                     </Link>
@@ -662,7 +670,7 @@ const Messages = () => {
                             className={`flex ${isOwn ? 'justify-end' : 'justify-start'}`}
                           >
                             <div
-                              className={`max-w-xs lg:max-w-md px-4 py-2.5 rounded-2xl shadow-sm ${
+                              className={`max-w-[85%] sm:max-w-xs lg:max-w-md px-3 sm:px-4 py-2 sm:py-2.5 rounded-2xl shadow-sm ${
                                 isOwn
                                   ? 'bg-gradient-to-r from-pink-500 to-rose-500 text-white'
                                   : 'bg-white text-gray-900 border border-gray-200'
