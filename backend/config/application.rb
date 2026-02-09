@@ -9,14 +9,7 @@ module ShaadiMatchingApi
     config.load_defaults 7.2
     config.api_only = true
     
-    config.middleware.insert_before 0, Rack::Cors do
-      allow do
-        origins '*'
-        resource '*',
-          headers: :any,
-          methods: [:get, :post, :put, :patch, :delete, :options, :head]
-      end
-    end
+    # CORS is configured in config/initializers/cors.rb
     
     config.active_storage.variant_processor = :mini_magick
   end

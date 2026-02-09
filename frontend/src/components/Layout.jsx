@@ -44,7 +44,7 @@ const Layout = ({ children }) => {
               </div>
               <div className="flex flex-col">
                 <span className="text-lg sm:text-xl md:text-2xl font-bold bg-gradient-to-r from-pink-600 to-rose-600 bg-clip-text text-transparent">
-                  PairPerfectly
+                  SwipeUpRight
                 </span>
                 <span className="text-xs font-medium text-gray-500 italic -mt-1 hidden sm:block">
                   Dating with intent. Marriage by choice.
@@ -208,7 +208,7 @@ const Layout = ({ children }) => {
                     />
                   </svg>
                 </div>
-                <h3 className="text-xl font-bold text-white">PairPerfectly</h3>
+                <h3 className="text-xl font-bold text-white">SwipeUpRight</h3>
               </div>
               <p className="text-lg font-semibold text-white mb-3 italic">
                 Dating with intent. Marriage by choice.
@@ -226,12 +226,12 @@ const Layout = ({ children }) => {
             </div>
             <div>
               <h4 className="font-semibold mb-4">Contact</h4>
-              <p className="text-pink-100">Email: support@pairperfectly.com</p>
+              <p className="text-pink-100">Email: support@swipeupright.com</p>
               <p className="text-pink-100">Phone: +91 1800-XXX-XXXX</p>
             </div>
           </div>
           <div className="mt-8 pt-8 border-t border-pink-400 text-center text-pink-100">
-            <p>&copy; 2024 PairPerfectly. All rights reserved.</p>
+            <p>&copy; 2024 SwipeUpRight. All rights reserved.</p>
           </div>
         </div>
       </footer>
